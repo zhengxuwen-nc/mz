@@ -2,14 +2,30 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>迷宫探险 - 网页版</title>
     <style>
-        canvas {
-            border: 1px solid black;
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            overflow: hidden;
         }
         #game-container {
             text-align: center;
             font-family: Arial, sans-serif;
+            max-width: 100%;
+        }
+        #gameCanvas {
+            border: 1px solid black;
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            aspect-ratio: 1 / 1;
         }
         #question-box {
             position: absolute;
@@ -20,7 +36,43 @@
             padding: 20px;
             border: 2px solid black;
             display: none;
+            max-width: 90%;
+            font-size: 18px;
         }
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        .button {
+            width: 60px;
+            height: 60px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 20px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .button:active {
+            background-color: #45a049;
+        }
+        #dpad {
+            display: grid;
+            grid-template-areas: 
+                " . up . "
+                "left mid right"
+                " . down . ";
+            gap: 5px;
+        }
+        #up { grid-area: up; }
+        #down { grid-area: down; }
+        #left { grid-area: left; }
+        #right { grid-area: right; }
+        #mid { grid-area: mid; background: transparent; }
     </style>
 </head>
 <body>
@@ -30,6 +82,21 @@
             <p id="question-text"></p>
             <p id="options-text"></p>
             <p>按 1-4 选择答案</p>
+        </div>
+        <div id="controls">
+            <div id="dpad">
+                <button id="up" class="button">↑</button>
+                <button id="left" class="button">←</button>
+                <button id="mid" class="button"></button>
+                <button id="right" class="button">→</button>
+                <button id="down" class="button">↓</button>
+            </div>
+            <button id="btn1" class="button">1</button>
+            <button id="btn2" class="button">2</button>
+            <button id="btn3" class="button">3</button>
+            <button id="btn4" class="button">4</button>
+            <button id="btnR" class="button">R</button>
+            <button id="btnQ" class="button">Q</button>
         </div>
     </div>
     <script src="game.js"></script>
