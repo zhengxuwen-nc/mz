@@ -25,7 +25,7 @@
         #gameCanvas {
             border: 1px solid black;
             width: 100%;
-            /* max-width: 640px; */
+            max-width: min(100vw, 100vh);
             height: auto;
             aspect-ratio: 1 / 1;
         }
@@ -39,7 +39,7 @@
             border: 2px solid black;
             display: none;
             max-width: 90%;
-            font-size: 4vw;
+            font-size: min(4vw, 4vh);
         }
         #controls {
             /* margin-top: 10px; */
@@ -50,8 +50,8 @@
             gap: 2px;
         }
         .button {
-            width: 12vw;
-            height: 12vw;
+            width: min(16vw, 16vh);
+            height: min(16vw, 16vh);
             font-size: 5vw;
             background-color: #4CAF50;
             color: white;
@@ -72,7 +72,7 @@
             gap: 5px;
         }
         #up { grid-area: up; }
-        #down { grid-area: down; }
+        #down { grid-area: mid; }
         #left { grid-area: left; }
         #right { grid-area: right; }
         #mid { grid-area: mid; background: transparent; }
@@ -95,15 +95,19 @@
                 <button id="down" class="button">↓</button>
             </div>
             <div style="flex-basis: 100%;"></div>
-            <div>
+            <div style="margin-top: min(6vh,6vw);">
                 <button id="btn1" class="button">1</button>
                 <button id="btn2" class="button">2</button>
                 <button id="btn3" class="button">3</button>
                 <button id="btn4" class="button">4</button>
+            </div>
+            
+            <div style="flex-basis: 100%;"></div>
+            <div>
                 <button id="btnR" class="button">R</button>
                 <button id="btnQ" class="button">Q</button>
             </div>
-            </div>
+        </div>
     </div>
     <script src="game.js"></script>
 </body>

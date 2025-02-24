@@ -2,6 +2,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const screenSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7, 800); // 动态调整大小
+console.log(screenSize);
 canvas.width = screenSize;
 canvas.height = screenSize;
 const cellSize = screenSize / 32;
@@ -783,3 +784,17 @@ document.getElementById('btnQ').addEventListener('touchstart', () => simulateKey
 // 启动游戏
 startGame();
 gameLoop();
+function isTouchDevice() {
+    return navigator.maxTouchPoints > 0 ||
+           navigator.msMaxTouchPoints > 0;
+}
+
+window.onload = function() {
+    // alert(navigator.msMaxTouchPoints);
+  if (!isTouchDevice()) {
+      const controlsDiv = document.getElementById('controls');
+      if (controlsDiv) {
+          controlsDiv.style.display = 'none';
+      }
+  }
+}
