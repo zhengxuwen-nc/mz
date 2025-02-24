@@ -798,3 +798,44 @@ window.onload = function() {
       }
   }
 }
+
+function adjustControlsPosition() {
+    const controlsDiv = document.getElementById('controls');
+    if (!controlsDiv) return; // 确保元素存在
+
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    const aspectRatio = screenWidth / screenHeight;
+
+    if (aspectRatio > 1) {
+        // 宽屏
+        controlsDiv.style.position = 'absolute';
+        controlsDiv.style.right = '0';
+        controlsDiv.style.bottom = '0';
+        controlsDiv.style.top = 'auto'; // 清除可能的竖屏样式
+        controlsDiv.style.display = 'flex';//确保controls内部元素正常显示
+        controlsDiv.style.flexDirection = 'column';//确保按钮纵向排列
+        controlsDiv.style.alignItems = 'flex-end'; // 靠右对齐
+        if (!isTouchDevice()) {
+            const gamecontainerDiv = document.getElementById('game-container');
+            if (gamecontainerDiv) {
+                gamecontainerDiv.style.textAlign = 'center';
+            }
+        }
+    } else {
+        // 竖屏
+        controlsDiv.style.position = 'relative'; // 恢复默认布局或使用相对定位
+        controlsDiv.style.right = 'auto'; // 清除可能的宽屏样式
+        controlsDiv.style.bottom = '0';
+        controlsDiv.style.top = 'auto';
+        controlsDiv.style.display = 'flex';//确保controls内部元素正常显示
+        controlsDiv.style.flexDirection = 'row';//确保按钮横向排列
+        controlsDiv.style.alignItems = 'center';//居中对齐
+    }
+}
+
+// 初始加载时执行一次
+adjustControlsPosition();
+
+// 监听窗口大小变化，动态调整位置
+window.addEventListener('resize', adjustControlsPosition);
