@@ -1,7 +1,7 @@
 // game.js
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const screenSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7, 640); // 动态调整大小
+const screenSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7, 800); // 动态调整大小
 canvas.width = screenSize;
 canvas.height = screenSize;
 const cellSize = screenSize / 32;
@@ -30,58 +30,508 @@ images.box.src = 'box.png';
 images.trap.src = 'trap.png';
 
 // 环保选择题（50道）
-const questions = [
-    { question: "以下哪种行为最能减少碳排放？", options: ["1. 开车上班", "2. 步行或骑自行车", "3. 使用一次性餐具", "4. 长时间开空调"], answer: 2 },
-    { question: "以下哪种能源是可再生的？", options: ["1. 煤炭", "2. 石油", "3. 太阳能", "4. 天然气"], answer: 3 },
-    { question: "减少塑料污染的最佳方法是什么？", options: ["1. 使用一次性塑料袋", "2. 回收利用塑料", "3. 焚烧塑料", "4. 丢弃到海洋"], answer: 2 },
-    { question: "以下哪种行为有助于节约水资源？", options: ["1. 洗澡时长时间开水", "2. 关紧水龙头", "3. 浇花用自来水", "4. 洗车不控制水量"], answer: 2 },
-    { question: "以下哪种物品可以回收？", options: ["1. 废电池", "2. 玻璃瓶", "3. 食物残渣", "4. 脏纸巾"], answer: 2 },
-    { question: "温室效应的主要原因是？", options: ["1. 二氧化碳增加", "2. 植树造林", "3. 使用清洁能源", "4. 节约用电"], answer: 1 },
-    { question: "以下哪种做法有助于保护森林？", options: ["1. 乱砍乱伐", "2. 植树造林", "3. 焚烧树木", "4. 随意丢弃垃圾"], answer: 2 },
-    { question: "以下哪种动物因环境污染受到威胁？", options: ["1. 家猫", "2. 北极熊", "3. 家鸡", "4. 宠物狗"], answer: 2 },
-    { question: "以下哪种能源对环境污染最小？", options: ["1. 煤炭", "2. 风能", "3. 石油", "4. 柴油"], answer: 2 },
-    { question: "减少垃圾的最佳方法是什么？", options: ["1. 垃圾分类", "2. 随意丢弃", "3. 全部焚烧", "4. 埋进土壤"], answer: 1 },
-    { question: "以下哪种气体是大气污染的主要来源？", options: ["1. 氧气", "2. 二氧化硫", "3. 氮气", "4. 水蒸气"], answer: 2 },
-    { question: "保护臭氧层的最佳方法是？", options: ["1. 使用含氟利昂的制冷剂", "2. 减少使用喷雾剂", "3. 增加汽车尾气排放", "4. 焚烧垃圾"], answer: 2 },
-    { question: "以下哪种做法有助于减少空气污染？", options: ["1. 多开车", "2. 使用公共交通", "3. 燃放烟花", "4. 露天烧烤"], answer: 2 },
-    { question: "以下哪种资源是不可再生的？", options: ["1. 风能", "2. 煤炭", "3. 太阳能", "4. 水能"], answer: 2 },
-    { question: "以下哪种行为可以保护土壤？", options: ["1. 过度使用化肥", "2. 种植绿植", "3. 随意倾倒废液", "4. 焚烧秸秆"], answer: 2 },
-    { question: "以下哪种海洋生物因塑料污染受害最严重？", options: ["1. 海豚", "2. 海龟", "3. 鲸鱼", "4. 珊瑚"], answer: 2 },
-    { question: "以下哪种做法能减少能源浪费？", options: ["1. 长时间开灯", "2. 使用节能灯", "3. 不关电器待机", "4. 频繁开关空调"], answer: 2 },
-    { question: "以下哪种行为有助于保护水质？", options: ["1. 向河流倾倒垃圾", "2. 减少化肥使用", "3. 工厂废水直排", "4. 过度捕捞"], answer: 2 },
-    { question: "以下哪种材料最环保？", options: ["1. 塑料", "2. 可降解材料", "3. 泡沫", "4. 一次性木筷"], answer: 2 },
-    { question: "以下哪种做法能减少噪音污染？", options: ["1. 深夜鸣笛", "2. 使用隔音设备", "3. 高声喧哗", "4. 播放高分贝音乐"], answer: 2 },
-    { question: "以下哪种能源是清洁能源？", options: ["1. 煤炭", "2. 核能", "3. 石油", "4. 天然气"], answer: 2 },
-    { question: "以下哪种行为对保护野生动物有益？", options: ["1. 非法狩猎", "2. 建立自然保护区", "3. 破坏栖息地", "4. 买卖野生动物"], answer: 2 },
-    { question: "以下哪种做法能减少温室气体？", options: ["1. 砍伐森林", "2. 多植树", "3. 增加工厂排放", "4. 燃烧化石燃料"], answer: 2 },
-    { question: "以下哪种物品应放入有害垃圾桶？", options: ["1. 纸张", "2. 废电池", "3. 果皮", "4. 玻璃"], answer: 2 },
-    { question: "以下哪种现象是酸雨的结果？", options: ["1. 土壤肥沃", "2. 建筑物腐蚀", "3. 空气清新", "4. 植物茂盛"], answer: 2 },
-    { question: "以下哪种行为有助于节约电能？", options: ["1. 长时间开电视", "2. 关闭不用的电器", "3. 使用大功率灯泡", "4. 待机不关机"], answer: 2 },
-    { question: "以下哪种做法能保护海洋生态？", options: ["1. 过度捕捞", "2. 减少海洋垃圾", "3. 倾倒油污", "4. 破坏珊瑚礁"], answer: 2 },
-    { question: "以下哪种气体导致雾霾？", options: ["1. 氧气", "2. PM2.5", "3. 水蒸气", "4. 氮气"], answer: 2 },
-    { question: "以下哪种做法有助于节能减排？", options: ["1. 长时间开空调", "2. 使用太阳能热水器", "3. 多开车", "4. 使用一次性用品"], answer: 2 },
-    { question: "以下哪种动物因气候变化受威胁？", options: ["1. 家狗", "2. 企鹅", "3. 家鸡", "4. 宠物猫"], answer: 2 },
-    { question: "以下哪种行为能减少白色污染？", options: ["1. 使用塑料袋", "2. 使用布袋", "3. 丢弃塑料瓶", "4. 焚烧塑料"], answer: 2 },
-    { question: "以下哪种资源需要循环利用？", options: ["1. 水", "2. 阳光", "3. 风力", "4. 空气"], answer: 1 },
-    { question: "以下哪种做法能减少土地沙漠化？", options: ["1. 过度放牧", "2. 植树造林", "3. 乱砍树木", "4. 开垦荒地"], answer: 2 },
-    { question: "以下哪种能源利用率最高？", options: ["1. 煤炭", "2. 风能", "3. 石油", "4. 天然气"], answer: 2 },
-    { question: "以下哪种垃圾属于可回收物？", options: ["1. 废纸", "2. 剩菜", "3. 废电池", "4. 脏塑料"], answer: 1 },
-    { question: "以下哪种行为对生态系统有害？", options: ["1. 保护湿地", "2. 填湖造田", "3. 植树造林", "4. 垃圾分类"], answer: 2 },
-    { question: "以下哪种现象与全球变暖有关？", options: ["1. 冰川融化", "2. 空气变冷", "3. 降雨减少", "4. 森林增多"], answer: 1 },
-    { question: "以下哪种做法能减少光污染？", options: ["1. 夜晚开强光灯", "2. 使用柔和灯光", "3. 增加路灯亮度", "4. 全天开灯"], answer: 2 },
-    { question: "以下哪种行为有助于保护鸟类？", options: ["1. 破坏鸟巢", "2. 设置鸟类喂食点", "3. 使用农药", "4. 砍伐树木"], answer: 2 },
-    { question: "以下哪种污染与工业排放有关？", options: ["1. 噪音污染", "2. 大气污染", "3. 光污染", "4. 热污染"], answer: 2 },
-    { question: "以下哪种做法能减少水污染？", options: ["1. 乱倒废水", "2. 处理污水再排放", "3. 过度捕鱼", "4. 丢弃垃圾到河中"], answer: 2 },
-    { question: "以下哪种能源利用不会产生二氧化碳？", options: ["1. 煤炭", "2. 水力发电", "3. 石油", "4. 天然气"], answer: 2 },
-    { question: "以下哪种行为能保护草原生态？", options: ["1. 过度放牧", "2. 禁止过度开垦", "3. 焚烧草地", "4. 随意丢弃垃圾"], answer: 2 },
-    { question: "以下哪种现象是大气污染的后果？", options: ["1. 能见度降低", "2. 空气清新", "3. 植物茂盛", "4. 水质变好"], answer: 1 },
-    { question: "以下哪种做法能减少热岛效应？", options: ["1. 增加绿化面积", "2. 多建高楼", "3. 铺设更多水泥路", "4. 减少植被"], answer: 1 },
-    { question: "以下哪种物品应放入厨余垃圾桶？", options: ["1. 塑料瓶", "2. 菜叶", "3. 废纸", "4. 电池"], answer: 2 },
-    { question: "以下哪种行为有助于保护珊瑚礁？", options: ["1. 过度捕捞", "2. 减少海洋污染", "3. 倾倒废物", "4. 破坏海底"], answer: 2 },
-    { question: "以下哪种做法能减少森林火灾？", options: ["1. 乱丢烟头", "2. 加强防火巡查", "3. 露天焚烧", "4. 随意野炊"], answer: 2 },
-    { question: "以下哪种能源利用不会破坏生态？", options: ["1. 煤炭开采", "2. 地热能", "3. 石油钻探", "4. 天然气开采"], answer: 2 },
-    { question: "以下哪种行为能提高空气质量？", options: ["1. 增加汽车使用", "2. 种植树木", "3. 焚烧垃圾", "4. 使用劣质燃料"], answer: 2 }
-];
+const questions =  [
+    {
+      "question_text": "以下哪种行为能提高空气质量？",
+      "options": [
+        "1. 增加汽车使用",
+        "2. 种植树木",
+        "3. 焚烧垃圾",
+        "4. 使用劣质燃料"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "下列哪一项是减少水污染的有效方法？",
+      "options": [
+        "1. 将工业废水直接排放到河流",
+        "2. 推广使用化肥农药",
+        "3. 建立污水处理厂",
+        "4. 随意丢弃生活垃圾"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种能源属于可再生能源？",
+      "options": [
+        "1. 煤炭",
+        "2. 石油",
+        "3. 天然气",
+        "4. 太阳能"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "为了保护生物多样性，我们应该怎么做？",
+      "options": [
+        "1. 大量砍伐森林",
+        "2. 建立自然保护区",
+        "3. 扩大城市建设规模",
+        "4. 随意捕杀野生动物"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "减少塑料污染，以下哪种做法最有效？",
+      "options": [
+        "1. 增加塑料袋的使用",
+        "2. 推广使用可降解塑料",
+        "3. 随意丢弃塑料垃圾",
+        "4. 减少塑料制品生产和使用"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "以下哪种行为不利于节约用水？",
+      "options": [
+        "1. 使用节水龙头",
+        "2. 洗衣水二次利用",
+        "3. 大水漫灌农田",
+        "4. 缩短淋浴时间"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项是造成土壤污染的主要原因之一？",
+      "options": [
+        "1. 过度使用农药",
+        "2. 合理施用肥料",
+        "3. 植树造林",
+        "4. 秸秆还田"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "为了应对气候变化，以下哪种措施是有效的？",
+      "options": [
+        "1. 增加温室气体排放",
+        "2. 减少森林面积",
+        "3. 发展低碳经济",
+        "4. 大量使用化石燃料"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种生活方式更环保？",
+      "options": [
+        "1. 购物自带环保袋",
+        "2. 出行首选私家车",
+        "3. 经常使用一次性餐具",
+        "4. 浪费食物"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "保护海洋环境，我们应该怎么做？",
+      "options": [
+        "1. 随意倾倒垃圾入海",
+        "2. 减少海洋捕捞",
+        "3. 开发海底矿产资源",
+        "4. 填海造陆"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "以下哪种行为可以减少噪音污染？",
+      "options": [
+        "1. 在居民区使用高音喇叭",
+        "2. 车辆在禁鸣区鸣笛",
+        "3. 安装隔音窗户",
+        "4. 夜晚进行建筑施工"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项是绿色建筑的特点？",
+      "options": [
+        "1. 大量使用高耗能材料",
+        "2. 注重能源节约和环境保护",
+        "3. 建筑密度高，绿化面积少",
+        "4. 室内装修豪华"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "以下哪种做法有助于保护臭氧层？",
+      "options": [
+        "1. 大量使用氟利昂制冷剂",
+        "2. 减少使用消耗臭氧层物质",
+        "3. 增加工业生产",
+        "4. 发展航空航天事业"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "下列哪一项不是空气污染物？",
+      "options": [
+        "1. 二氧化碳",
+        "2. 二氧化硫",
+        "3. 可吸入颗粒物",
+        "4. 氮气"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "为了保护森林资源，以下哪种做法是正确的？",
+      "options": [
+        "1. 大面积采伐原始森林",
+        "2. 提倡植树造林和森林抚育",
+        "3. 毁林开荒",
+        "4. 随意砍伐林木"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "以下哪种废弃物属于有害垃圾，需要特殊处理？",
+      "options": [
+        "1. 废纸",
+        "2. 废旧电池",
+        "3. 厨余垃圾",
+        "4. 塑料瓶"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "下列哪一项不是提倡绿色出行的措施？",
+      "options": [
+        "1. 优先选择燃油汽车",
+        "2. 骑自行车或步行",
+        "3. 乘坐公共交通工具",
+        "4. 拼车出行"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "以下哪种农业生产方式更环保可持续？",
+      "options": [
+        "1. 大面积种植单一作物",
+        "2. 过度依赖化肥农药",
+        "3. 发展生态农业和有机农业",
+        "4. 焚烧秸秆"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "为了保护湿地，我们应该怎么做？",
+      "options": [
+        "1. 建立湿地保护区，限制人为破坏",
+        "2. 发展湿地旅游，过度开发",
+        "3. 填埋湿地用于城市建设",
+        "4. 将湿地改造成耕地"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "下列哪一项不是雾霾天气的主要危害？",
+      "options": [
+        "1. 促进植物生长",
+        "2. 引起呼吸道疾病",
+        "3. 影响交通安全",
+        "4. 降低空气能见度"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "以下哪种能源利用方式对环境影响最小？",
+      "options": [
+        "1. 燃煤发电",
+        "2. 核能发电",
+        "3. 风力发电",
+        "4. 燃油发电"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项不是节约用电的措施？",
+      "options": [
+        "1. 随手关灯",
+        "2. 使用节能电器",
+        "3. 频繁开关电器",
+        "4. 减少电器待机时间"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种包装材料更环保？",
+      "options": [
+        "1. 纸质包装",
+        "2. 塑料薄膜",
+        "3. 塑料泡沫",
+        "4. 复合塑料包装"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "下列哪一项不是保护野生动物栖息地的方法？",
+      "options": [
+        "1. 建立自然保护区",
+        "2. 恢复退化生态系统",
+        "3. 过度放牧和开垦",
+        "4. 减少人为干扰"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种行为不利于垃圾分类？",
+      "options": [
+        "1. 了解垃圾分类知识",
+        "2. 将所有垃圾混合投放",
+        "3. 购买分类垃圾桶",
+        "4. 参与垃圾分类宣传活动"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "下列哪一项不是酸雨的成因？",
+      "options": [
+        "1. 过度使用农药",
+        "2. 汽车尾气排放氮氧化物",
+        "3. 燃煤排放二氧化硫",
+        "4. 火山爆发释放硫化物"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "以下哪种做法有助于减少光污染？",
+      "options": [
+        "1. 增加城市夜景照明",
+        "2. 限制户外广告牌亮度",
+        "3. 使用高亮度LED灯",
+        "4. 建筑外墙采用反光材料"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "下列哪一项不是生物多样性的作用？",
+      "options": [
+        "1. 维持生态系统稳定",
+        "2. 提供食物和药物",
+        "3. 促进物种单一化",
+        "4. 具有重要的科学价值"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种措施可以有效防治荒漠化？",
+      "options": [
+        "1. 植树种草，退耕还林还草",
+        "2. 乱砍滥伐",
+        "3. 过度放牧",
+        "4. 扩大城市建设"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "下列哪一项不是白色污染的来源？",
+      "options": [
+        "1. 废弃塑料包装物",
+        "2. 农田地膜",
+        "3. 建筑垃圾",
+        "4. 一次性塑料餐具"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种行为符合绿色消费理念？",
+      "options": [
+        "1. 追求名牌，过度消费",
+        "2. 购买过度包装的商品",
+        "3. 优先选择节能环保产品",
+        "4. 浪费粮食和水电"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项不是控制噪声污染的途径？",
+      "options": [
+        "1. 声源处降噪",
+        "2. 传播途径中降噪",
+        "3. 人耳处防噪",
+        "4. 增加噪声源"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "以下哪种能源技术更清洁环保？",
+      "options": [
+        "1. 水力发电技术",
+        "2. 页岩气开采技术",
+        "3. 煤炭液化技术",
+        "4. 油页岩开采技术"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "下列哪一项不是生态系统的功能？",
+      "options": [
+        "1. 物质循环",
+        "2. 能量流动",
+        "3. 信息传递",
+        "4. 产生污染"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "以下哪种做法不利于保护耕地？",
+      "options": [
+        "1. 退耕还林还草",
+        "2. 合理轮作，保护地力",
+        "3. 占用耕地建设",
+        "4. 推广节水灌溉技术"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项不是全球变暖的影响？",
+      "options": [
+        "1. 海平面上升",
+        "2. 极端天气事件频发",
+        "3. 生物多样性增加",
+        "4. 冰川融化加速"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种行为可以减少电子垃圾污染？",
+      "options": [
+        "1. 回收和合理处理废旧电子产品",
+        "2. 购买更多新型电子产品",
+        "3. 随意丢弃废旧电子产品",
+        "4. 将电子产品送给他人继续使用"
+      ],
+      "answer": 1
+    },
+    {
+      "question_text": "下列哪一项不是可持续发展的目标？",
+      "options": [
+        "1. 经济增长",
+        "2. 社会公平",
+        "3. 环境保护",
+        "4. 资源无限开发"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "以下哪种做法有助于提高能源利用效率？",
+      "options": [
+        "1. 粗放式能源使用",
+        "2. 推广节能技术和设备",
+        "3. 增加能源浪费",
+        "4. 发展高耗能产业"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "下列哪一项不是环境监测的内容？",
+      "options": [
+        "1. 空气质量监测",
+        "2. 水质监测",
+        "3. 土壤监测",
+        "4. 经济效益评估"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "以下哪种措施可以减少汽车尾气污染？",
+      "options": [
+        "1. 增加汽车产量",
+        "2. 使用清洁能源汽车",
+        "3. 提高汽油标号",
+        "4. 鼓励购买大排量汽车"
+      ],
+      "answer": 2
+    },
+    {
+      "question_text": "下列哪一项不是保护珍稀动物的方法？",
+      "options": [
+        "1. 建立人工饲养基地",
+        "2. 打击盗猎行为",
+        "3. 破坏动物栖息地",
+        "4. 开展科学研究和保护教育"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种行为不利于节约粮食？",
+      "options": [
+        "1. 按需取餐，杜绝浪费",
+        "2. 提倡光盘行动",
+        "3. 大量囤积粮食",
+        "4. 将剩饭剩菜进行合理处理"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项不是环境影响评价的内容？",
+      "options": [
+        "1. 分析项目对环境的影响",
+        "2. 提出环境保护措施",
+        "3. 评估项目经济效益",
+        "4. 预测环境影响趋势"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种做法有助于实现碳中和？",
+      "options": [
+        "1. 大量使用化石燃料",
+        "2. 增加碳排放量",
+        "3. 发展碳捕集和封存技术",
+        "4. 减少植树造林"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项不是自然资源？",
+      "options": [
+        "1. 阳光",
+        "2. 空气",
+        "3. 矿产",
+        "4. 人工合成材料"
+      ],
+      "answer": 4
+    },
+    {
+      "question_text": "以下哪种行为可以减少水土流失？",
+      "options": [
+        "1. 陡坡开荒",
+        "2. 毁林种地",
+        "3. 植树种草，保持水土",
+        "4. 过度樵采"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项不是环境法律法规的作用？",
+      "options": [
+        "1. 保护环境和资源",
+        "2. 惩罚环境违法行为",
+        "3. 促进经济快速增长，不考虑环境影响",
+        "4. 规范人们的环境行为"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "以下哪种技术可以用于处理生活污水？",
+      "options": [
+        "1. 焚烧法",
+        "2. 填埋法",
+        "3. 生物处理法",
+        "4. 化学氧化法"
+      ],
+      "answer": 3
+    },
+    {
+      "question_text": "下列哪一项不是提倡简约适度生活的意义？",
+      "options": [
+        "1. 减少资源消耗",
+        "2. 减轻环境压力",
+        "3. 促进物质极大丰富，鼓励过度消费",
+        "4. 提升生活品质"
+      ],
+      "answer": 3
+    }
+  ];
 
 // Prim 算法生成迷宫
 function createMazePrim(size) {
@@ -194,9 +644,9 @@ function drawFog(maze, playerX, playerY, endPos) {
 
 // 绘制时间
 function drawTime(remainingTime) {
-    ctx.font = '36px SimSun';
+    ctx.font = `${canvas.width * 0.05}px SimSun`;
     ctx.fillStyle = COLORS.RED;
-    ctx.fillText(`时间: ${Math.floor(remainingTime)}`, screenSize - 150, 40);
+    ctx.fillText(`时间: ${Math.floor(remainingTime)}`, screenSize*0.8, screenSize/16);
 }
 
 // 游戏主循环
@@ -230,9 +680,9 @@ function gameLoop() {
         drawTime(remainingTime);
 
         if (hintMessage && now < hintTimer) {
-            ctx.font = '36px SimSun';
+            ctx.font = `${canvas.width * 0.05}px SimSun`;
             ctx.fillStyle = hintMessage.includes('正确') || hintMessage.includes('道具') ? COLORS.GREEN : COLORS.RED;
-            ctx.fillText(hintMessage, screenSize / 2 - 50, screenSize / 2);
+            ctx.fillText(hintMessage, screenSize *0.3, screenSize / 2);
         } else {
             hintMessage = null;
         }
@@ -248,17 +698,20 @@ function gameLoop() {
         }
     } else if (gameState === 'answering') {
         document.getElementById('question-box').style.display = 'block';
-        document.getElementById('question-text').textContent = currentQuestion.question;
-        document.getElementById('options-text').textContent = currentQuestion.options.join('\n');
+        document.getElementById('question-text').textContent = currentQuestion.question_text;
+        document.getElementById('options-text').innerHTML = currentQuestion.options.join('<br>');
     } else if (gameOver) {
-        ctx.font = '36px SimSun';
+        ctx.font = `${canvas.width * 0.05}px SimSun`;
         ctx.fillStyle = hintMessage === '恭喜你，你赢了！' ? COLORS.GREEN : COLORS.RED;
-        ctx.fillText(hintMessage, screenSize / 2 - 100, screenSize / 2 - 40);
+        ctx.fillText(hintMessage, screenSize *0.344, screenSize *0.42);
+        ctx.font = `${canvas.width * 0.04}px SimSun`;
         ctx.fillStyle = COLORS.BLACK;
-        ctx.fillText('按Q退出游戏，按R重新开始游戏', screenSize / 2 - 200, screenSize / 2 + 20);
-        ctx.fillText('创作者：', screenSize / 2 - 350, screenSize / 2 + 200); // 新增创作者提示
-        ctx.fillText('南昌市育新学校北京西路校区', screenSize / 2 - 200, screenSize / 2 + 240); // 新增创作者提示
-        ctx.fillText('四(8)班 郑馨怡', screenSize / 2 + 10, screenSize / 2 + 280); // 新增创作者提示
+        ctx.fillText('按Q退出游戏，按R重新开始游戏', screenSize *0.25, screenSize *0.54);
+        ctx.font = `${canvas.width * 0.03}px SimSun`;
+        ctx.fillStyle = COLORS.GREEN;
+        ctx.fillText('创作者：', screenSize *0.25, screenSize *0.7); // 新增创作者提示
+        ctx.fillText('南昌市育新学校北京西路校区', screenSize *0.4, screenSize *0.75); // 新增创作者提示
+        ctx.fillText('四(8)班 郑馨怡', screenSize *0.52, screenSize *0.8); // 新增创作者提示
     }
 
     requestAnimationFrame(gameLoop);
@@ -303,7 +756,7 @@ document.addEventListener('keydown', (e) => {
             hintMessage = '回答正确';
             hintTimer = Date.now() + 5000;
         } else {
-            hintMessage = '回答错误';
+            hintMessage = '回答错误，扣时5秒！';
             hintTimer = Date.now() + 5000;
             startTime -= 5000; // 扣5秒
         }

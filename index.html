@@ -8,28 +8,30 @@
         body {
             margin: 0;
             padding: 0;
-            display: flex;
+            /* display: flex; */
             justify-content: center;
             align-items: center;
             height: 100vh;
             background-color: #f0f0f0;
             overflow: hidden;
+            touch-action: none;
         }
         #game-container {
             text-align: center;
             font-family: Arial, sans-serif;
             max-width: 100%;
+            width: 95vw;/*添加宽度，避免在一些设备上过宽*/
         }
         #gameCanvas {
             border: 1px solid black;
             width: 100%;
-            max-width: 640px;
+            /* max-width: 640px; */
             height: auto;
             aspect-ratio: 1 / 1;
         }
         #question-box {
             position: absolute;
-            top: 50%;
+            top: 30%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: white;
@@ -37,23 +39,24 @@
             border: 2px solid black;
             display: none;
             max-width: 90%;
-            font-size: 18px;
+            font-size: 4vw;
         }
         #controls {
-            margin-top: 10px;
+            /* margin-top: 10px; */
+            margin-bottom: 10px;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
+            gap: 2px;
         }
         .button {
-            width: 60px;
-            height: 60px;
+            width: 12vw;
+            height: 12vw;
+            font-size: 5vw;
             background-color: #4CAF50;
             color: white;
             border: none;
             border-radius: 5px;
-            font-size: 20px;
             cursor: pointer;
             touch-action: manipulation;
         }
@@ -91,13 +94,16 @@
                 <button id="right" class="button">→</button>
                 <button id="down" class="button">↓</button>
             </div>
-            <button id="btn1" class="button">1</button>
-            <button id="btn2" class="button">2</button>
-            <button id="btn3" class="button">3</button>
-            <button id="btn4" class="button">4</button>
-            <button id="btnR" class="button">R</button>
-            <button id="btnQ" class="button">Q</button>
-        </div>
+            <div style="flex-basis: 100%;"></div>
+            <div>
+                <button id="btn1" class="button">1</button>
+                <button id="btn2" class="button">2</button>
+                <button id="btn3" class="button">3</button>
+                <button id="btn4" class="button">4</button>
+                <button id="btnR" class="button">R</button>
+                <button id="btnQ" class="button">Q</button>
+            </div>
+            </div>
     </div>
     <script src="game.js"></script>
 </body>
