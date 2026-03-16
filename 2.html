@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>中文报听写助手 - 安卓适配版</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --bg-color: #FDFCF0;
+            --card-bg: #FFFFFF;
+            --text-color: #2C3E50;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            padding: 15px 0;
+            text-align: center;
+            background: #FFF;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 500px;
+            padding-top: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            width: 100%;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            padding: 25px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .word-display { font-size: 3.5rem; margin: 10px 0; color: #333; }
+        .pinyin-display { font-size: 1.4rem; color: #2196F3; margin: 0; font-weight: bold; }
+        .meaning-display { font-size: 1.1rem; color: #666; background: #F0F7FF; padding: 12px; border-radius: 10px; margin-top: 15px; line-height: 1.5; }
+        .long-word { font-size: 2.2rem; }
+
+        .test-icon { font-size: 5rem; margin-bottom: 10px; }
+        .test-text { font-size: 1.2rem; color: #666; font-weight: bold; }
+
+        .btn-main { width: 85%; padding: 18px; font-size: 1.3rem; border-radius: 35px; border: none; cursor: pointer; margin: 10px 0; transition: 0.2s; font-weight: bold; }
+        .btn-speak { background: var(--primary-color); color: white; box-shadow: 0 4px 0 #388E3C; }
+        .btn-speak:active { transform: translateY(2px); box-shadow: 0 2px 0 #388E3C; }
+        
+        .mode-card { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-top: 30px; }
+        .btn-mode-select { padding: 30px; font-size: 1.5rem; border-radius: 20px; border: none; color: white; cursor: pointer; }
+
+        .nav-btns { display: flex; gap: 15px; width: 85%; margin-top: 10px; }
+        .nav-btns button { flex: 1; padding: 15px; border-radius: 15px; border: 1px solid #DDD; background: white; font-size: 1rem; }
+
+        #resultList { display: none; width: 100%; background: white; border-radius: 20px; padding: 25px; box-sizing: border-box; }
+        .result-item { border-bottom: 1px solid #EEE; padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+
+        /* 安卓激活遮罩 */
+        #activationOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; text-align: center; padding: 20px; box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+<div id="activationOverlay">
+    <h2>欢迎使用字灵大冒险</h2>
+    <p>为了在手机上正常听到读音，<br>请点击下方按钮开启语音引擎：</p>
+    <button class="btn-main btn-speak" onclick="activateVoice()">点击开启读音</button>
+</div>
+
+<header id="mainHeader" style="display:none;">
+    <div id="progressInfo" style="color: #888; margin-bottom: 5px;">进度: 1 / 64</div>
+    <div id="modeTitle" style="font-weight: bold; font-size: 1.2rem;">模式名称</div>
+</header>
+
+<div class="container" id="menuContainer" style="display:none;">
+    <h2 style="margin-bottom: 10px;">字灵大冒险</h2>
+    <p style="color: #666;">准备好挑战你的中文词汇量了吗？</p>
+    <div class="mode-card">
+        <button class="btn-mode-select" style="background: var(--secondary-color);" onclick="initMode('learn')">📖 看字学习模式</button>
+        <button class="btn-mode-select" style="background: #673AB7;" onclick="initMode('test')">✍️ 纯净听写模式</button>
+    </div>
+</div>
+
+<div class="container" id="gameContainer" style="display:none;">
+    <div class="card" id="mainCard">
+        <div id="contentArea">
+            <p class="pinyin-display" id="pinyinDisplay"></p>
+            <h1 class="word-display" id="wordDisplay"></h1>
+            <div class="meaning-display" id="meaningDisplay"></div>
+        </div>
+        <div id="testArea" style="display:none;">
+            <div class="test-icon">📝</div>
+            <p class="test-text">认真听，纸上写</p>
+        </div>
+    </div>
+
+    <button class="btn-main btn-speak" id="speakBtn" onclick="speakCurrent()">🔊 播放读音</button>
+    
+    <div class="nav-btns">
+        <button onclick="prev()">上一个</button>
+        <button id="nextBtn" onclick="next()" style="background: #FFF;">下一个</button>
+    </div>
+    
+    <button onclick="exitMode()" style="margin-top:30px; background:none; border:none; color: #999; text-decoration: underline;">返回主菜单</button>
+</div>
+
+<div class="container" id="resultList">
+    <h2 style="color: var(--primary-color);">🎉 听写结束！</h2>
+    <div id="listContent" style="margin-bottom: 20px; max-height: 400px; overflow-y: auto;"></div>
+    <button class="btn-main btn-speak" onclick="location.reload()">回主菜单</button>
+</div>
+
+<script>
+    const rawWords = [
+        {w:"辨认", p:"biàn rèn", m:"根据特点找出、认出。"}, {w:"辩论", p:"biàn lùn", m:"争论，阐述不同见解。"},
+        {w:"辫子", p:"biàn zi", m:"分股编紧的头发。"}, {w:"花瓣", p:"huā bàn", m:"花冠的组成部分。"},
+        {w:"燥热", p:"zào rè", m:"空气干燥，气候炎热。"}, {w:"烦躁", p:"fán zào", m:"心里烦闷，坐立不安。"},
+        {w:"噪音", p:"zào yīn", m:"嘈杂、刺耳的声音。"}, {w:"即使", p:"jí shǐ", m:"表示假设的让步。"},
+        {w:"既然", p:"jì rán", m:"连词，表示先肯定前提。"}, {w:"慷慨", p:"kāng kǎi", m:"大方，不吝啬。"},
+        {w:"大概", p:"dà gài", m:"约略，不很精确。"}, {w:"桥梁", p:"qiáo liáng", m:"架在水面上接通两岸。"},
+        {w:"高粱", p:"gāo liáng", m:"一年生草本植物，可食。"}, {w:"崇拜", p:"chóng bài", m:"极为尊崇、敬仰。"},
+        {w:"作祟", p:"zuò suì", m:"迷信指鬼神制造祸乱。"}, {w:"徒弟", p:"tú dì", m:"跟从师傅学习的人。"},
+        {w:"迁徙", p:"qiān xǐ", m:"搬家，迁移。"}, {w:"勿扰", p:"wù rǎo", m:"请不要打扰。"},
+        {w:"匆忙", p:"cōng máng", m:"急急忙忙。"}, {w:"试卷", p:"shì juàn", m:"考试用的卷子。"},
+        {w:"入场券", p:"rù chǎng quàn", m:"进入场馆的凭证。"}, {w:"载重", p:"zài zhòng", m:"交通工具负担的重量。"},
+        {w:"裁剪", p:"cái jiǎn", m:"把衣料按尺寸剪开。"}, {w:"栽树", p:"zāi shù", m:"把树苗种在土里。"},
+        {w:"刮风", p:"guā fēng", m:"风吹，空气流动。"}, {w:"括号", p:"kuò hào", m:"标点符号 ( ) 等。"},
+        {w:"甜蜜", p:"tián mì", m:"像蜜一样甜，感到幸福。"}, {w:"静谧", p:"jì mì", m:"安静，寂静。"},
+        {w:"荣誉", p:"róng yù", m:"光荣的名誉。"}, {w:"誊写", p:"téng xiě", m:"照底稿抄写。"},
+        {w:"蜿蜒", p:"wān yán", m:"龙蛇等曲折爬行的样子。"}, {w:"蜻蜓", p:"qīng tíng", m:"捕食蚊蝇的益虫。"},
+        {w:"锻炼", p:"duàn liàn", m:"通过运动增强体质。"}, {w:"链条", p:"liàn tiáo", m:"金属环连成的锁链。"},
+        {w:"教诲", p:"jiào huì", m:"教导，训诫。"}, {w:"悔恨", p:"huǐ hèn", m:"懊悔，怨恨。"},
+        {w:"陡峭", p:"dǒu qiào", m:"山势高而直，坡度大。"}, {w:"树梢", p:"shù shāo", m:"树木末端。"},
+        {w:"稍微", p:"shāo wēi", m:"表示数量不多或程度不深。"}, {w:"捎信", p:"shāo xìn", m:"请人顺便带信。"},
+        {w:"销毁", p:"xiāo huǐ", m:"熔化毁掉。"}, {w:"俊俏", p:"jùn qiào", m:"容貌好看。"},
+        {w:"竣工", p:"jùn gōng", m:"工程完成。"}, {w:"严峻", p:"yán jùn", m:"严厉，严肃。"},
+        {w:"駿马", p:"jùn mǎ", m:"跑得很快的好马。"}, {w:"书籍", p:"shū jí", m:"书的总称。"},
+        {w:"慰藉", p:"wèi jiè", m:"安慰，抚慰。"}, {w:"躲避", p:"duǒ bì", m:"隐蔽起来，避开。"},
+        {w:"掩蔽", p:"yǎn bì", m:"遮掩，遮蔽。"}, {w:"制度", p:"zhì dù", m:"要求大家共同遵守的规定。"},
+        {w:"智慧", p:"zhì huì", m:"辨析、发明的能力。"}, {w:"青翠欲滴", p:"qīng cuì yù dī", m:"形容草木非常翠绿。"},
+        {w:"筋疲力尽", p:"jīn pí lì jìn", m:"非常疲劳，力气用尽。"}, {w:"苦心孤诣", p:"kǔ xīn gū yì", m:"费尽心思，达到独到境地。"},
+        {w:"衣衫褴褛", p:"yī shān lán lǚ", m:"形容身上衣服破破烂烂。"}, {w:"鼎力相助", p:"dǐng lì xiāng zhù", m:"给以极大的帮助。"},
+        {w:"冠冕堂皇", p:"guān miǎn táng huáng", m:"形容表面庄严或正大。"}, {w:"鹰隼", p:"yīng sǔn", m:"猛禽，凶猛。"},
+        {w:"狼藉", p:"láng jí", m:"乱七八糟的样子。"}, {w:"云霄", p:"yún xiāo", m:"极高的天空。"},
+        {w:"元宵", p:"yuán xiāo", m:"农历正月十五。"}, {w:"仓颉", p:"cāng jié", m:"传说中汉字的创造者。"},
+        {w:"尴尬", p:"gān gà", m:"处境困难，不好意思。"}, {w:"潋滟", p:"liàn yàn", m:"水波荡漾的样子。"},
+        {w:"鸟瞰", p:"niǎo kàn", m:"从高处往下看。"}, {w:"惊蛰", p:"jīng zhé", m:"春季的第三个节气。"},
+        {w:"婺源", p:"wù yuán", m:"地名，在江西省。"}
+    ];
+
+    let learnList = [], testList = [];
+    let learnIdx = 0, testIdx = 0;
+    let mode = '';
+
+    // 安卓专用语音预热
+    function activateVoice() {
+        const msg = new SpeechSynthesisUtterance("语音引擎已激活");
+        msg.lang = 'zh-CN';
+        msg.volume = 0; // 静音播放一次
+        window.speechSynthesis.speak(msg);
+        
+        // 隐藏遮罩，显示菜单
+        document.getElementById('activationOverlay').style.display = 'none';
+        document.getElementById('menuContainer').style.display = 'flex';
+    }
+
+    function shuffle(arr) {
+        return [...arr].sort(() => Math.random() - 0.5);
+    }
+
+    function initMode(m) {
+        mode = m;
+        document.getElementById('menuContainer').style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'flex';
+        document.getElementById('mainHeader').style.display = 'block';
+        document.getElementById('modeTitle').innerText = (m === 'learn' ? '📖 正在进行：学习' : '✍️ 正在进行：听写');
+        
+        if (m === 'learn') {
+            learnList = shuffle(rawWords);
+            document.getElementById('contentArea').style.display = 'block';
+            document.getElementById('testArea').style.display = 'none';
+        } else {
+            testList = shuffle(rawWords);
+            document.getElementById('contentArea').style.display = 'none';
+            document.getElementById('testArea').style.display = 'block';
+        }
+        update();
+    }
+
+    function update() {
+        const list = (mode === 'learn' ? learnList : testList);
+        const idx = (mode === 'learn' ? learnIdx : testIdx);
+        const item = list[idx];
+
+        document.getElementById('progressInfo').innerText = `进度: ${idx + 1} / ${list.length}`;
+        
+        if (mode === 'learn') {
+            const wEl = document.getElementById('wordDisplay');
+            wEl.innerText = item.w;
+            wEl.className = item.w.length > 3 ? 'word-display long-word' : 'word-display';
+            document.getElementById('pinyinDisplay').innerText = item.p;
+            document.getElementById('meaningDisplay').innerText = item.m;
+        }
+        
+        // 听写模式自动报音（已有用户点击操作后）
+        if (mode === 'test') {
+            setTimeout(speakCurrent, 300);
+        }
+    }
+
+    function speakCurrent() {
+        const item = (mode === 'learn' ? learnList : testList)[mode === 'learn' ? learnIdx : testIdx];
+        
+        // 安卓兼容：先cancel再speak
+        window.speechSynthesis.cancel();
+        
+        const msg = new SpeechSynthesisUtterance();
+        msg.text = mode === 'test' ? `请写出：${item.w}` : item.w;
+        msg.lang = 'zh-CN';
+        msg.rate = 0.7;
+        
+        // 关键修复：强制寻找系统中的中文声音
+        const voices = window.speechSynthesis.getVoices();
+        const zhVoice = voices.find(v => v.lang.includes('zh'));
+        if (zhVoice) msg.voice = zhVoice;
+
+        window.speechSynthesis.speak(msg);
+    }
+
+    function next() {
+        if (mode === 'learn') {
+            if (learnIdx < learnList.length - 1) { learnIdx++; update(); }
+            else { alert("🎉 当前词库已学完！"); }
+        } else {
+            if (testIdx < testList.length - 1) { testIdx++; update(); }
+            else { showResults(); }
+        }
+    }
+
+    function prev() {
+        if (mode === 'learn') { if (learnIdx > 0) { learnIdx--; update(); } }
+        else { if (testIdx > 0) { testIdx--; update(); } }
+    }
+
+    function showResults() {
+        document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('mainHeader').style.display = 'none';
+        document.getElementById('resultList').style.display = 'block';
+        const content = document.getElementById('listContent');
+        content.innerHTML = testList.map((item, i) => `
+            <div class="result-item">
+                <span>${i + 1}. <strong style="font-size:1.2rem; color:#333;">${item.w}</strong></span>
+                <span style="color:#2196F3; font-weight:bold;">${item.p}</span>
+            </div>
+        `).join('');
+    }
+
+    function exitMode() {
+        document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('mainHeader').style.display = 'none';
+        document.getElementById('menuContainer').style.display = 'flex';
+    }
+
+    // 针对安卓的初始预热
+    window.addEventListener('load', () => {
+        window.speechSynthesis.getVoices();
+    });
+</script>
+</body>
+</html>
