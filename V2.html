@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>字灵大冒险 - 全力进阶版</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --accent-color: #673AB7;
+            --bg-color: #FDFCF0;
+            --card-bg: #FFFFFF;
+            --text-color: #2C3E50;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0; display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; -webkit-tap-highlight-color: transparent;
+        }
+
+        header {
+            width: 100%; padding: 15px 0; text-align: center;
+            background: #FFF; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .container { flex: 1; display: flex; flex-direction: column; align-items: center; width: 95%; max-width: 600px; padding: 20px 0; }
+
+        /* 日期选择 */
+        .date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+        .date-btn {
+            background: var(--card-bg); padding: 20px; border-radius: 15px;
+            text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            cursor: pointer; border: 2px solid transparent; font-weight: bold;
+        }
+        .date-btn.active { border-color: var(--secondary-color); background: #E3F2FD; }
+
+        .mode-section { margin-top: 25px; width: 100%; display: none; flex-direction: column; gap: 12px; }
+
+        /* 卡片设计 */
+        .card {
+            background: var(--card-bg); width: 100%; min-height: 280px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            margin-bottom: 20px; padding: 25px; box-sizing: border-box; text-align: center;
+        }
+
+        .word-display { font-size: 3.2rem; margin: 10px 0; color: #333; }
+        .pinyin-display { font-size: 1.4rem; color: var(--secondary-color); font-weight: bold; margin-bottom: 8px; }
+        .meaning-display { font-size: 1.05rem; color: #666; background: #F0F7FF; padding: 12px; border-radius: 10px; line-height: 1.5; }
+
+        .btn-main { width: 100%; padding: 16px; font-size: 1.2rem; border-radius: 30px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-green { background: var(--primary-color); color: white; box-shadow: 0 4px 0 #388E3C; }
+        .btn-blue { background: var(--secondary-color); color: white; }
+        .btn-purple { background: var(--accent-color); color: white; }
+
+        .nav-btns { display: flex; gap: 12px; width: 100%; }
+        .nav-btns button { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #DDD; background: white; font-weight: bold; }
+
+        /* 语音状态指示器 */
+        .tts-status {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        .tts-status.loading {
+            display: flex;
+            background: #FFF8E1;
+            color: #F57F17;
+            border: 1px solid #FFE082;
+        }
+        .tts-status.success {
+            display: flex;
+            background: #E8F5E9;
+            color: #2E7D32;
+            border: 1px solid #A5D6A7;
+        }
+        .tts-status.error {
+            display: flex;
+            background: #FFEBEE;
+            color: #C62828;
+            border: 1px solid #EF9A9A;
+            cursor: pointer;
+        }
+        .tts-status.fallback {
+            display: flex;
+            background: #E3F2FD;
+            color: #1565C0;
+            border: 1px solid #90CAF9;
+        }
+
+        /* 播放按钮动画 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        .btn-playing {
+            animation: pulse 0.8s ease-in-out infinite;
+            background: #43A047 !important;
+        }
+
+        /* 加载动画 */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            width: 14px; height: 14px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        .result-item { border-bottom: 1px solid #EEE; padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+<header id="appHeader" style="display:none;">
+    <div id="progressText" style="color: #888; font-size: 0.9rem;"></div>
+    <div id="viewTitle" style="font-weight: bold;"></div>
+</header>
+
+<div class="container" id="menuView">
+    <h2 style="margin-bottom: 20px;">字灵大冒险</h2>
+    
+    <div class="date-grid" id="dateGrid"></div>
+
+    <div class="mode-section" id="modeOptions">
+        <button class="btn-main btn-blue" onclick="window.app.start('learn')">📖 看字学习模式</button>
+        <button class="btn-main btn-purple" onclick="window.app.start('test')">✍️ 纯净听写模式</button>
+    </div>
+
+    <div style="width:100%; height:1px; background:#EEE; margin:25px 0;"></div>
+    <button class="btn-main btn-green" onclick="window.app.start('random_all')">🏆 全词库随机听写挑战</button>
+</div>
+
+<div class="container" id="gameView" style="display:none;">
+    <div class="card">
+        <div id="learnArea">
+            <p class="pinyin-display" id="pinyinShow"></p>
+            <h1 class="word-display" id="wordShow"></h1>
+            <div class="meaning-display" id="meaningShow"></div>
+        </div>
+        <div id="testArea" style="display:none;">
+            <div style="font-size: 4rem;">🎧</div>
+            <p style="font-size: 1.2rem; color: #666;">认真听读音，在纸上听写</p>
+        </div>
+    </div>
+
+    <!-- 语音状态指示器 -->
+    <div id="ttsStatus" class="tts-status">
+        <span id="ttsSpinner" class="spinner" style="display:none;"></span>
+        <span id="ttsMsg"></span>
+    </div>
+
+    <button class="btn-main btn-green" id="playBtn" onclick="window.app.play()">🔊 播放读音</button>
+
+    <div class="nav-btns" style="margin-top:15px;">
+        <button onclick="window.app.move(-1)">上一个</button>
+        <button onclick="window.app.move(1)">下一个</button>
+    </div>
+    
+    <button onclick="location.reload()" style="margin-top:25px; background:none; border:none; color: #999; text-decoration: underline;">返回主菜单</button>
+</div>
+
+<div class="container" id="resultView" style="display:none;">
+    <h3 style="color: var(--primary-color);">听写完成！请核对答案</h3>
+    <div id="resultBox" style="width:100%; background:white; border-radius:15px; padding:15px;"></div>
+    <button class="btn-main btn-green" style="margin-top:20px;" onclick="location.reload()">回到主页</button>
+</div>
+
+<!-- 隐藏音频播放器 -->
+<audio id="player" style="display:none;" preload="none"></audio>
+
+<script>
+(function() {
+    // ─────────────────────────────────────────────
+    // 词库数据
+    // ─────────────────────────────────────────────
+    const vocabData = [
+  {
+    "date": "第一日",
+    "words": [
+      { "w": "辨认", "p": "biàn rèn", "m": "根据特点辨别，做出判断，认定。" },
+      { "w": "辩论", "p": "biàn lùn", "m": "彼此用一定的理由来说明自己对事物或问题的见解，揭露对方的矛盾，以便最后得到正确的认识或共同的意见。" },
+      { "w": "辫子", "p": "biàn zi", "m": "把头发分股交叉编成的条条儿。" },
+      { "w": "花瓣", "p": "huā bàn", "m": "花冠的组成部分，通常呈鲜艳的颜色，起保护雄蕊、吸引昆虫传粉的作用。" },
+      { "w": "燥热", "p": "zào rè", "m": "干燥炎热。" },
+      { "w": "烦躁", "p": "fán zào", "m": "烦闷急躁。" },
+      { "w": "噪音", "p": "zào yīn", "m": "音高和音强变化混乱、听起来不和谐的声音。泛指嘈杂、刺耳的声音。" },
+      { "w": "即使", "p": "jí shǐ", "m": "表示假设的让步。" },
+      { "w": "既然", "p": "jì rán", "m": "用在上半句话里，表示先提出前提，而后加以推论。" },
+      { "w": "慷慨", "p": "kāng kǎi", "m": "充满正气，情绪激昂；不吝啬。" },
+      { "w": "大概", "p": "dà gài", "m": "大致的内容或情况；不十分精确或不十分详尽；表示有很大的可能性。" },
+      { "w": "桥梁", "p": "qiáo liáng", "m": "架在水上或空中以便通行的建筑物。" },
+      { "w": "高粱", "p": "gāo liang", "m": "一年生草本植物，叶子和玉米相似但较窄，花序圆锥形，生在茎的顶端，子实红褐色。" },
+      { "w": "崇拜", "p": "chóng bài", "m": "尊敬钦佩。" },
+      { "w": "作祟", "p": "zuò suì", "m": "鬼怪害人；泛指坏人捣乱或坏思想、坏风气产生影响。" },
+      { "w": "徒弟", "p": "tú dì", "m": "跟从师傅学习的人。" },
+      { "w": "迁徙", "p": "qiān xǐ", "m": "迁移，改变居住的地方。" },
+      { "w": "勿扰", "p": "wù rǎo", "m": "不要打扰。" },
+      { "w": "匆忙", "p": "cōng máng", "m": "急急忙忙。" },
+      { "w": "试卷", "p": "shì juàn", "m": "考试时准备应试人写答案或应试人已经写上答案的卷子。" },
+      { "w": "入场券", "p": "rù chǎng quàn", "m": "进入某些场所（如剧场、体育场等）的票证。" },
+      { "w": "载重", "p": "zài zhòng", "m": "指交通工具负担重量。" },
+      { "w": "裁剪", "p": "cái jiǎn", "m": "缝制衣服时把衣料按一定尺寸裁开。" },
+      { "w": "栽树", "p": "zāi shù", "m": "种植树木。" },
+      { "w": "刮风", "p": "guā fēng", "m": "风吹。" },
+      { "w": "括号", "p": "kuò hào", "m": "标点符号的一种，即（）、〔〕等，主要表示文中注释的部分。" },
+      { "w": "甜蜜", "p": "tián mì", "m": "形容感到幸福、愉快、舒适。" },
+      { "w": "静谧", "p": "jìng mì", "m": "安静。" },
+      { "w": "荣誉", "p": "róng yù", "m": "光荣的名誉。" },
+      { "w": "誊写", "p": "téng xiě", "m": "照底稿抄写。" },
+      { "w": "蜿蜒", "p": "wān yán", "m": "蛇类爬行的样子；（山脉、河流、道路等）弯弯曲曲地延伸。" },
+      { "w": "蜻蜓", "p": "qīng tíng", "m": "昆虫，身体细长，胸部的背面有两对膜状的翅，生活在水边，捕食蚊子等小飞虫。" },
+      { "w": "锻炼", "p": "duàn liàn", "m": "通过体育运动使身体强壮；通过生产劳动、社会活动等，使工作能力、觉悟等提高。" },
+      { "w": "链条", "p": "liàn tiáo", "m": "机械上传动用的链子；用金属小环连成的像绳子的东西。" },
+      { "w": "教诲", "p": "jiào huì", "m": "教训，教导。" },
+      { "w": "悔恨", "p": "huǐ hèn", "m": "懊悔。" },
+      { "w": "陡峭", "p": "dǒu qiào", "m": "（山势等）坡度很大，直上直下的。" },
+      { "w": "树梢", "p": "shù shāo", "m": "树的顶端。" },
+      { "w": "稍微", "p": "shāo wēi", "m": "表示数量少或程度浅。" },
+      { "w": "捎信", "p": "shāo xìn", "m": "顺便带信。" },
+      { "w": "销毁", "p": "xiāo huǐ", "m": "烧掉；毁掉。" },
+      { "w": "俊俏", "p": "jùn qiào", "m": "（相貌）好看。" },
+      { "w": "竣工", "p": "jùn gōng", "m": "工程告成。" },
+      { "w": "严峻", "p": "yán jùn", "m": "严厉；严肃；严重。" },
+      { "w": "骏马", "p": "jùn mǎ", "m": "好马，跑得快的马。" },
+      { "w": "书籍", "p": "shū jí", "m": "书的统称。" },
+      { "w": "慰藉", "p": "wèi jiè", "m": "安慰。" },
+      { "w": "躲避", "p": "duǒ bì", "m": "故意离开或隐蔽起来，使人看不见；离开对自己不利的事物。" },
+      { "w": "掩蔽", "p": "yǎn bì", "m": "遮蔽；隐藏。" },
+      { "w": "制度", "p": "zhì dù", "m": "要求大家共同遵守的办事规程或行动准则。" },
+      { "w": "智慧", "p": "zhì huì", "m": "辨析判断、发明创造的能力。" },
+      { "w": "青翠欲滴", "p": "qīng cuì yù dī", "m": "形容草木茂盛润泽，颜色浓郁得好像要滴下来一样。" },
+      { "w": "筋疲力尽", "p": "jīn pí lì jìn", "m": "形容非常疲劳，一点力气也没有了。" },
+      { "w": "苦心孤诣", "p": "kǔ xīn gū yì", "m": "费尽心思钻研或经营。" },
+      { "w": "衣衫褴褛", "p": "yī shān lán lǚ", "m": "衣服破破烂烂。" },
+      { "w": "鼎力相助", "p": "dǐng lì xiāng zhù", "m": "大力相助（敬辞，用于请托或表示感谢时）。" },
+      { "w": "冠冕堂皇", "p": "guān miǎn táng huáng", "m": "形容表面上庄严或正大的样子。" },
+      { "w": "鹰隼", "p": "yīng sǔn", "m": "鹰和隼，都属猛禽，喻指凶猛或勇猛的人。" },
+      { "w": "狼藉", "p": "láng jí", "m": "乱七八糟，杂乱不堪。" },
+      { "w": "云霄", "p": "yún xiāo", "m": "天空。" },
+      { "w": "元宵", "p": "yuán xiāo", "m": "农历正月十五日夜晚；用糯米粉等做成的球形食品，有馅。" },
+      { "w": "仓颉", "p": "Cāng Jié", "m": "古代传说中汉字的创造者。" },
+      { "w": "尴尬", "p": "gān gà", "m": "处境困难，不好处理；（神色、态度）不自然。" },
+      { "w": "潋滟", "p": "liàn yàn", "m": "形容水波相连，荡漾闪光。" },
+      { "w": "鸟瞰", "p": "niǎo kàn", "m": "从高处往下看；事物的概括描写。" },
+      { "w": "惊蛰", "p": "Jīng zhé", "m": "二十四节气之一，在3月5、6或7日。" },
+      { "w": "婺源", "p": "Wù yuán", "m": "县名，在江西省东北部。" }
+    ]
+  },
+  {
+    "date": "第二日",
+    "words": [
+      { "w": "必须", "p": "bì xū", "m": "一定要，强调情理上必要。" },
+      { "w": "必需", "p": "bì xū", "m": "一定要有的，不可缺少的。" },
+      { "w": "启事", "p": "qǐ shì", "m": "公开声明某事的文字（如寻人启事）。" },
+      { "w": "启示", "p": "qǐ shì", "m": "启发提示，使人有所领悟。" },
+      { "w": "权利", "p": "quán lì", "m": "公民或组织依法享有的权益。" },
+      { "w": "权力", "p": "quán lì", "m": "政治上的强制力量、职责范围的支配力。" },
+      { "w": "度过", "p": "dù guò", "m": "经过时间（如度过假期）。" },
+      { "w": "渡过", "p": "dù guò", "m": "通过江河、困难等。" },
+      { "w": "化妆", "p": "huà zhuāng", "m": "用化妆品修饰容貌。" },
+      { "w": "化装", "p": "huà zhuāng", "m": "改变装束、容貌，假扮。" },
+      { "w": "反映", "p": "fǎn yìng", "m": "把情况、意见等告诉上级或有关部门。" },
+      { "w": "反应", "p": "fǎn yìng", "m": "事情引起的意见、态度或行动。" },
+      { "w": "以至", "p": "yǐ zhì", "m": "直到，甚至，表示范围、程度延伸。" },
+      { "w": "以致", "p": "yǐ zhì", "m": "因而造成，多指不好的结果。" },
+      { "w": "截至", "p": "jié zhì", "m": "截止到某个时间（后面可加时间）。" },
+      { "w": "截止", "p": "jié zhǐ", "m": "到一定期限停止（后面不加时间）。" },
+      { "w": "定金", "p": "dìng jīn", "m": "具有担保作用，一般不退。" },
+      { "w": "订金", "p": "dìng jīn", "m": "预付款，可退。" },
+      { "w": "抱负", "p": "bào fù", "m": "远大的志向。" },
+      { "w": "报复", "p": "bào fù", "m": "打击批评自己或损害自己利益的人。" },
+      { "w": "抱怨", "p": "bào yuàn", "m": "心中不满，数说别人不对。" },
+      { "w": "报怨", "p": "bào yuàn", "m": "对所怨恨的人做出反应（较少用）。" },
+      { "w": "融合", "p": "róng hé", "m": "几种事物合在一起，不分彼此。" },
+      { "w": "熔合", "p": "róng hé", "m": "熔化后结合在一起。" },
+      { "w": "融化", "p": "róng huà", "m": "冰雪等变成水。" },
+      { "w": "溶化", "p": "róng huà", "m": "固体在液体中化开。" },
+      { "w": "考查", "p": "kǎo chá", "m": "用一定标准来检查、衡量。" },
+      { "w": "考察", "p": "kǎo chá", "m": "实地观察调查，细致深刻观察。" },
+      { "w": "精心", "p": "jīng xīn", "m": "特别用心、细心。" },
+      { "w": "经心", "p": "jīng xīn", "m": "在意，留心（多用于否定）。" },
+      { "w": "直接", "p": "zhí jiē", "m": "不经过中间事物。" },
+      { "w": "直截", "p": "zhí jié", "m": "言语、行动简单爽快。" },
+      { "w": "学历", "p": "xué lì", "m": "学习的经历，指曾在哪些学校毕业。" },
+      { "w": "学力", "p": "xué lì", "m": "在学问上达到的程度。" },
+      { "w": "法制", "p": "fǎ zhì", "m": "法律制度。" },
+      { "w": "法治", "p": "fǎ zhì", "m": "依照法律治理国家和社会。" },
+      { "w": "国事", "p": "guó shì", "m": "国家大事。" },
+      { "w": "国是", "p": "guó shì", "m": "国家大计、大政方针（书面）。" },
+      { "w": "终身", "p": "zhōng shēn", "m": "一生，一辈子（多就切身事说）。" },
+      { "w": "终生", "p": "zhōng shēng", "m": "一生（多就事业说）。" },
+      { "w": "品味", "p": "pǐn wèi", "m": "品尝、玩味、体会。" },
+      { "w": "品位", "p": "pǐn wèi", "m": "品质、档次、格调。" },
+      { "w": "虚无缥缈", "p": "xū wú piāo miǎo", "m": "形容虚幻渺茫，不可捉摸。" },
+      { "w": "姹紫嫣红", "p": "chà zǐ yān hóng", "m": "形容各种花朵娇艳美丽。" },
+      { "w": "鳞次栉比", "p": "lín cì zhì bǐ", "m": "形容房屋、船只等排列得很密、很整齐。" },
+      { "w": "相形见绌", "p": "xiāng xíng jiàn chù", "m": "跟另一人或事物比较之后，显出了不足。" },
+      { "w": "不落窠臼", "p": "bù luò kē jiù", "m": "比喻文章或艺术等有独创风格，不落俗套。" },
+      { "w": "病入膏肓", "p": "bìng rù gāo huāng", "m": "形容病势十分严重，无法医治；比喻事情到了无法挽救的地步。" },
+      { "w": "簸箕", "p": "bò ji", "m": "一种用来簸粮食、清理杂物的竹制器具；也指扫地时收垃圾的器具。" },
+      { "w": "鄱阳湖", "p": "Pó yáng Hú", "m": "中国第一大淡水湖，位于江西省北部。" }
+    ]
+  },
+  {
+    "date": "第三日",
+    "words": [
+      { "w": "必需", "p": "bì xū", "m": "一定要有的，不可缺少的。" },
+      { "w": "启事", "p": "qǐ shì", "m": "公开声明某事的文字。" },
+      { "w": "权利", "p": "quán lì", "m": "公民或组织依法享有的权益。" },
+      { "w": "渡过", "p": "dù guò", "m": "通过江河、困难等。" },
+      { "w": "化装", "p": "huà zhuāng", "m": "改变装束、容貌，假扮。" },
+      { "w": "反应", "p": "fǎn yìng", "m": "事情引起的意见、态度或行动。" },
+      { "w": "以至", "p": "yǐ zhì", "m": "直到，甚至，表示范围、程度延伸。" },
+      { "w": "截止", "p": "jié zhǐ", "m": "到一定期限停止。" },
+      { "w": "订金", "p": "dìng jīn", "m": "预付款，可退。" },
+      { "w": "报复", "p": "bào fù", "m": "打击批评自己或损害自己利益的人。" },
+      { "w": "报怨", "p": "bào yuàn", "m": "对所怨恨的人做出反应。" },
+      { "w": "熔合", "p": "róng hé", "m": "熔化后结合在一起。" },
+      { "w": "溶化", "p": "róng huà", "m": "固体在液体中化开。" },
+      { "w": "考察", "p": "kǎo chá", "m": "实地观察调查，细致深刻观察。" },
+      { "w": "经心", "p": "jīng xīn", "m": "在意，留心。" },
+      { "w": "直接", "p": "zhí jiē", "m": "不经过中间事物。" },
+      { "w": "学力", "p": "xué lì", "m": "在学问上达到的程度。" },
+      { "w": "法制", "p": "fǎ zhì", "m": "法律制度。" },
+      { "w": "国是", "p": "guó shì", "m": "国家大计、大政方针。" },
+      { "w": "品位", "p": "pǐn wèi", "m": "品质、档次、格调。" },
+      { "w": "鳞次栉比", "p": "lín cì zhì bǐ", "m": "形容房屋、船只等排列得很密、很整齐。" },
+      { "w": "病入膏肓", "p": "bìng rù gāo huāng", "m": "形容病势十分严重，无法医治。" },
+      { "w": "簸箕", "p": "bò ji", "m": "一种竹制器具，用于簸粮食或收垃圾。" },
+      { "w": "鄱阳湖", "p": "Pó yáng Hú", "m": "中国第一大淡水湖。" },
+      { "w": "不落窠臼", "p": "bù luò kē jiù", "m": "比喻有独创风格，不落俗套。" },
+      { "w": "肺部", "p": "fèi bù", "m": "人和高等动物的呼吸器官。" },
+      { "w": "感冒", "p": "gǎn mào", "m": "一种常见的传染病。" },
+      { "w": "尴尬", "p": "gān gà", "m": "处境困难，不好处理；不自然。" },
+      { "w": "虐待", "p": "nüè dài", "m": "用残暴狠毒的手段对待。" },
+      { "w": "考试", "p": "kǎo shì", "m": "通过书面或口头提问等方式考查知识或技能。" },
+      { "w": "糊羹", "p": "hú gēng", "m": "一种浓稠的汤或粥。" },
+      { "w": "寡妇", "p": "guǎ fu", "m": "死了丈夫的妇人。" },
+      { "w": "作弊", "p": "zuò bì", "m": "用欺骗的手法做违法乱纪或不合规定的事。" },
+      { "w": "魔鬼", "p": "mó guǐ", "m": "宗教或神话传说中迷惑人、害人的鬼怪。" },
+      { "w": "餐厅", "p": "cān tīng", "m": "供吃饭用的大房间。" },
+      { "w": "脊梁", "p": "jǐ liang", "m": "脊柱；比喻支撑事物的中坚力量。" },
+      { "w": "日寇", "p": "Rì kòu", "m": "指抗日战争时期的日本侵略者。" },
+      { "w": "鸭胗", "p": "yā zhēn", "m": "鸭的胃。" },
+      { "w": "腐竹", "p": "fǔ zhú", "m": "一种豆制品。" },
+      { "w": "酱干", "p": "jiàng gān", "m": "一种酱制豆干。" },
+      { "w": "荸荠", "p": "bí qi", "m": "多年生草本植物，地下茎扁圆形，可食用。" },
+      { "w": "勾芡", "p": "gōu qiàn", "m": "做菜时使汤汁变稠。" },
+      { "w": "荤素", "p": "hūn sù", "m": "指荤菜和素菜。" },
+      { "w": "舅舅", "p": "jiù jiu", "m": "母亲的兄弟。" },
+      { "w": "胶囊", "p": "jiāo náng", "m": "一种药品剂型。" },
+      { "w": "抵御", "p": "dǐ yù", "m": "抵挡，防御。" },
+      { "w": "吞噬", "p": "tūn shì", "m": "吞食；并吞。" },
+      { "w": "严谨", "p": "yán jǐn", "m": "严密谨慎。" },
+      { "w": "懒惰", "p": "lǎn duò", "m": "不爱劳动和工作。" },
+      { "w": "橘子", "p": "jú zi", "m": "一种常见水果。" },
+      { "w": "锻炼", "p": "duàn liàn", "m": "通过体育活动增强体质；通过实践使能力提高。" },
+      { "w": "蜿蜒", "p": "wān yán", "m": "弯弯曲曲地延伸。" },
+      { "w": "澎湃", "p": "péng pài", "m": "形容波浪互相撞击。" },
+      { "w": "酝酿", "p": "yùn niàng", "m": "造酒的发酵过程；比喻做准备工作。" },
+      { "w": "巍峨", "p": "wēi é", "m": "形容山或建筑物的高大雄伟。" },
+      { "w": "璀璨", "p": "cuǐ càn", "m": "形容光彩夺目。" },
+      { "w": "犹豫", "p": "yóu yù", "m": "拿不定主意。" },
+      { "w": "玲珑", "p": "líng lóng", "m": "精巧细致。" },
+      { "w": "尴尬", "p": "gān gà", "m": "处境困难，不好处理。" },
+      { "w": "慷慨", "p": "kāng kǎi", "m": "不吝啬；充满正气。" },
+      { "w": "霹雳", "p": "pī lì", "m": "响雷。" },
+      { "w": "朦胧", "p": "méng lóng", "m": "模糊，不清楚。" },
+      { "w": "肆虐", "p": "sì nüè", "m": "任意残杀或迫害；起破坏作用。" },
+      { "w": "祭祀", "p": "jì sì", "m": "置备供品向神佛或祖先致祭行礼。" },
+      { "w": "窟窿", "p": "kū long", "m": "洞；孔。" },
+      { "w": "蜿蜒", "p": "wān yán", "m": "弯弯曲曲地延伸。" },
+      { "w": "澎湃", "p": "péng pài", "m": "形容波浪互相撞击。" },
+      { "w": "巍峨", "p": "wēi é", "m": "形容高大雄伟。" },
+      { "w": "磅礴", "p": "páng bó", "m": "气势盛大。" },
+      { "w": "信笺", "p": "xìn jiān", "m": "信纸。" },
+      { "w": "熙熙攘攘", "p": "xī xī rǎng rǎng", "m": "形容人来人往，非常热闹。" }
+    ]
+  },
+  {
+    "date": "第四日",
+    "words": [
+      { "w": "熙攘", "p": "xī rǎng", "m": "形容人来人往，喧闹纷杂。" },
+      { "w": "寡妇", "p": "guǎ fu", "m": "死了丈夫的妇人。" },
+      { "w": "餐厅", "p": "cān tīng", "m": "供吃饭用的大房间。" },
+      { "w": "舅舅", "p": "jiù jiu", "m": "母亲的兄弟。" },
+      { "w": "胶囊", "p": "jiāo náng", "m": "一种药品剂型。" },
+      { "w": "肆虐", "p": "sì nüè", "m": "任意残杀或迫害；起破坏作用。" },
+      { "w": "蜿蜒", "p": "wān yán", "m": "弯弯曲曲地延伸。" },
+      { "w": "玲珑", "p": "líng lóng", "m": "精巧细致。" },
+      { "w": "尴尬", "p": "gān gà", "m": "处境困难，不好处理。" },
+      { "w": "虐待", "p": "nüè dài", "m": "用残暴狠毒的手段对待。" },
+      { "w": "作弊", "p": "zuò bì", "m": "用欺骗的手法做违法乱纪或不合规定的事。" },
+      { "w": "魔鬼", "p": "mó guǐ", "m": "宗教或神话传说中迷惑人、害人的鬼怪。" },
+      { "w": "脊梁", "p": "jǐ liang", "m": "脊柱；比喻支撑事物的中坚力量。" },
+      { "w": "日寇", "p": "Rì kòu", "m": "指抗日战争时期的日本侵略者。" },
+      { "w": "吞噬", "p": "tūn shì", "m": "吞食；并吞。" },
+      { "w": "抵御", "p": "dǐ yù", "m": "抵挡，防御。" },
+      { "w": "严谨", "p": "yán jǐn", "m": "严密谨慎。" },
+      { "w": "懒惰", "p": "lǎn duò", "m": "不爱劳动和工作。" },
+      { "w": "酝酿", "p": "yùn niàng", "m": "造酒的发酵过程；比喻做准备工作。" },
+      { "w": "澎湃", "p": "péng pài", "m": "形容波浪互相撞击。" },
+      { "w": "巍峨", "p": "wēi é", "m": "形容山或建筑物的高大雄伟。" },
+      { "w": "璀璨", "p": "cuǐ càn", "m": "形容光彩夺目。" },
+      { "w": "犹豫", "p": "yóu yù", "m": "拿不定主意。" },
+      { "w": "高粱", "p": "gāo liang", "m": "一年生草本植物，子实供食用、酿酒等。" },
+      { "w": "崇拜", "p": "chóng bài", "m": "尊敬钦佩。" },
+      { "w": "作祟", "p": "zuò suì", "m": "鬼怪害人；泛指坏人捣乱或坏思想、坏风气产生影响。" },
+      { "w": "迁徙", "p": "qiān xǐ", "m": "迁移，改变居住的地方。" },
+      { "w": "慷慨", "p": "kāng kǎi", "m": "不吝啬；充满正气。" },
+      { "w": "慰藉", "p": "wèi jiè", "m": "安慰。" },
+      { "w": "霹雳", "p": "pī lì", "m": "响雷。" },
+      { "w": "襁褓", "p": "qiǎng bǎo", "m": "包裹婴儿的布或被；借指婴儿。" },
+      { "w": "孩提", "p": "hái tí", "m": "指幼儿时期。" },
+      { "w": "始龀", "p": "shǐ chèn", "m": "指儿童换牙，约七八岁。" },
+      { "w": "垂髫", "p": "chuí tiáo", "m": "指童年。" },
+      { "w": "总角", "p": "zǒng jiǎo", "m": "指童年。" },
+      { "w": "豆蔻", "p": "dòu kòu", "m": "指女子十三四岁。" },
+      { "w": "束发", "p": "shù fà", "m": "指男子十五岁。" },
+      { "w": "及笄", "p": "jí jī", "m": "指女子十五岁。" },
+      { "w": "弱冠", "p": "ruò guàn", "m": "指男子二十岁左右。" },
+      { "w": "加冠", "p": "jiā guān", "m": "指男子二十岁。" },
+      { "w": "笄年", "p": "jī nián", "m": "指女子十五岁。" },
+      { "w": "而立", "p": "ér lì", "m": "指三十岁。" },
+      { "w": "不惑", "p": "bù huò", "m": "指四十岁。" },
+      { "w": "知命", "p": "zhī mìng", "m": "指五十岁。" },
+      { "w": "耳顺", "p": "ěr shùn", "m": "指六十岁。" },
+      { "w": "花甲", "p": "huā jiǎ", "m": "指六十岁。" },
+      { "w": "古稀", "p": "gǔ xī", "m": "指七十岁。" },
+      { "w": "耄耋", "p": "mào dié", "m": "指八九十岁。" },
+      { "w": "鲐背", "p": "tái bèi", "m": "指九十岁。" },
+      { "w": "期颐", "p": "qī yí", "m": "指一百岁。" },
+      { "w": "子鼠", "p": "zǐ shǔ", "m": "十二生肖之一。" },
+      { "w": "丑牛", "p": "chǒu niú", "m": "十二生肖之一。" },
+      { "w": "寅虎", "p": "yín hǔ", "m": "十二生肖之一。" },
+      { "w": "卯兔", "p": "mǎo tù", "m": "十二生肖之一。" },
+      { "w": "辰龙", "p": "chén lóng", "m": "十二生肖之一。" },
+      { "w": "巳蛇", "p": "sì shé", "m": "十二生肖之一。" },
+      { "w": "午马", "p": "wǔ mǎ", "m": "十二生肖之一。" },
+      { "w": "未羊", "p": "wèi yáng", "m": "十二生肖之一。" },
+      { "w": "申猴", "p": "shēn hóu", "m": "十二生肖之一。" },
+      { "w": "酉鸡", "p": "yǒu jī", "m": "十二生肖之一。" },
+      { "w": "戌狗", "p": "xū gǒu", "m": "十二生肖之一。" },
+      { "w": "亥猪", "p": "hài zhū", "m": "十二生肖之一。" },
+      { "w": "鄱阳湖", "p": "Pó yáng Hú", "m": "中国第一大淡水湖。" },
+      { "w": "洞庭湖", "p": "Dòng tíng Hú", "m": "中国第二大淡水湖。" },
+      { "w": "太湖", "p": "Tài Hú", "m": "中国五大淡水湖之一。" },
+      { "w": "洪泽湖", "p": "Hóng zé Hú", "m": "中国五大淡水湖之一。" },
+      { "w": "巢湖", "p": "Cháo Hú", "m": "中国五大淡水湖之一。" },
+      { "w": "东海", "p": "Dōng Hǎi", "m": "中国三大边缘海之一。" },
+      { "w": "南海", "p": "Nán Hǎi", "m": "中国三大边缘海之一。" },
+      { "w": "黄海", "p": "Huáng Hǎi", "m": "中国三大边缘海之一。" },
+      { "w": "渤海", "p": "Bó Hǎi", "m": "中国内海。" },
+      { "w": "丞相", "p": "chéng xiàng", "m": "古代辅佐君主的最高行政长官。" },
+      { "w": "太尉", "p": "tài wèi", "m": "古代掌管军事的最高官员。" },
+      { "w": "御史", "p": "yù shǐ", "m": "古代负责监察的官员。" },
+      { "w": "刺史", "p": "cì shǐ", "m": "古代地方监察官职。" },
+      { "w": "太守", "p": "tài shǒu", "m": "古代郡一级行政长官。" },
+      { "w": "县令", "p": "xiàn lìng", "m": "古代县级行政长官。" },
+      { "w": "尚书", "p": "shàng shū", "m": "古代六部的最高长官。" },
+      { "w": "侍郎", "p": "shì láng", "m": "古代六部副长官。" },
+      { "w": "郎中", "p": "láng zhōng", "m": "古代六部内设机构长官。" },
+      { "w": "学士", "p": "xué shì", "m": "古代掌管文学撰述的官员。" },
+      { "w": "翰林", "p": "hàn lín", "m": "古代文学侍从机构。" },
+      { "w": "军机大臣", "p": "jūn jī dà chén", "m": "清代辅佐皇帝的军事、政务机构长官。" },
+      { "w": "总督", "p": "zǒng dū", "m": "明清时期地方军政长官。" },
+      { "w": "巡抚", "p": "xún fǔ", "m": "明清时期省级地方长官。" },
+      { "w": "钦差大臣", "p": "qīn chāi dà chén", "m": "皇帝临时派遣出外办理重大事务的官员。" },
+      { "w": "太医", "p": "tài yī", "m": "古代宫廷医生。" },
+      { "w": "国子监祭酒", "p": "guó zǐ jiàn jì jiǔ", "m": "古代最高学府国子监的主管官。" },
+      { "w": "锦衣卫", "p": "jǐn yī wèi", "m": "明代皇帝的侍卫机构。" }
+    ]
+  },
+  {
+    "date": "第五日",
+    "words": [
+      { "w": "诓骗", "p": "kuāng piàn", "m": "说谎骗人。" },
+      { "w": "存恤", "p": "cún xù", "m": "慰问，抚恤。" },
+      { "w": "纶巾", "p": "guān jīn", "m": "古代用青丝带做的头巾。" },
+      { "w": "愧赧", "p": "kuì nǎn", "m": "因羞愧而脸红。" },
+      { "w": "筵席", "p": "yán xí", "m": "酒席；宴会。" },
+      { "w": "嗔怪", "p": "chēn guài", "m": "责怪，埋怨。" },
+      { "w": "簇拥", "p": "cù yōng", "m": "许多人紧紧围着。" },
+      { "w": "作揖", "p": "zuò yī", "m": "两手抱拳高拱，身子略弯，表示敬礼。" },
+      { "w": "莫高窟", "p": "Mò gāo Kū", "m": "位于甘肃敦煌，著名的佛教艺术石窟。" },
+      { "w": "三顾茅庐", "p": "sān gù máo lú", "m": "比喻诚心诚意地一再邀请。" },
+      { "w": "妄自菲薄", "p": "wàng zì fěi bó", "m": "过分看轻自己，形容自卑。" },
+      { "w": "引经据典", "p": "yǐn jīng jù diǎn", "m": "引用经典中的语句作为立论的根据。" },
+      { "w": "一气呵成", "p": "yī qì hē chéng", "m": "形容文章结构紧凑，文气连贯；比喻做一件事安排紧凑，不间断。" },
+      { "w": "妙手回春", "p": "miào shǒu huí chūn", "m": "称赞医生医道高明，能把垂危的病人治好。" },
+      { "w": "如坐针毡", "p": "rú zuò zhēn zhān", "m": "形容心神不宁，坐立不安。" },
+      { "w": "芒刺在背", "p": "máng cì zài bèi", "m": "形容极度不安。" },
+      { "w": "倒气", "p": "dǎo qì", "m": "临死前急促、断续地呼吸。" },
+      { "w": "唿哨", "p": "hū shào", "m": "口哨。" },
+      { "w": "荣膺", "p": "róng yīng", "m": "光荣地接受或承当。" },
+      { "w": "阔绰", "p": "kuò chuò", "m": "排场大，生活奢侈。" },
+      { "w": "孱水", "p": "chàn shuǐ", "m": "搀水。" },
+      { "w": "蘸酒", "p": "zhàn jiǔ", "m": "用酒沾湿。" },
+      { "w": "服辩", "p": "fú biàn", "m": "古代指承认罪状的供词。" },
+      { "w": "盘桓", "p": "pán huán", "m": "徘徊；逗留。" },
+      { "w": "涓涓", "p": "juān juān", "m": "细水慢流的样子。" },
+      { "w": "拾掇", "p": "shí duo", "m": "整理；修理。" },
+      { "w": "岳阳楼", "p": "Yuè yáng Lóu", "m": "湖南岳阳著名古楼。" },
+      { "w": "望眼欲穿", "p": "wàng yǎn yù chuān", "m": "形容盼望殷切。" },
+      { "w": "咬文嚼字", "p": "yǎo wén jiáo zì", "m": "过分地斟酌字句。" },
+      { "w": "藻饰", "p": "zǎo shì", "m": "修饰文词。" },
+      { "w": "狡黠", "p": "jiǎo xiá", "m": "狡猾。" },
+      { "w": "诘难", "p": "jié nàn", "m": "责难。" },
+      { "w": "滞碍", "p": "zhì ài", "m": "阻碍；不通畅。" },
+      { "w": "味同嚼蜡", "p": "wèi tóng jiáo là", "m": "形容没有味道，多指文章或讲话枯燥无味。" },
+      { "w": "傅彩", "p": "fù cǎi", "m": "着色；使文辞有文采。" },
+      { "w": "阐证", "p": "chǎn zhèng", "m": "阐述并证明。" },
+      { "w": "涉猎", "p": "shè liè", "m": "粗略地阅读；接触，涉及。" },
+      { "w": "聪颖", "p": "cōng yǐng", "m": "聪明。" },
+      { "w": "滕王阁", "p": "Téng wáng Gé", "m": "江西南昌著名古楼。" },
+      { "w": "海枯石烂", "p": "hǎi kū shí làn", "m": "形容经历极长的时间，多用于誓言。" }
+    ]
+  },
+  {
+    "date": "第六日",
+    "words": [
+      { "w": "藤蔓", "p": "téng wàn", "m": "藤和蔓，泛指攀援植物的茎干。" },
+      { "w": "赓续", "p": "gēng xù", "m": "继续，延续。" },
+      { "w": "篆书", "p": "zhuàn shū", "m": "汉字古代书体之一，分大篆和小篆。" },
+      { "w": "祝融", "p": "Zhù róng", "m": "中国古代神话中的火神。" },
+      { "w": "璀璨", "p": "cuǐ càn", "m": "形容珠玉等光彩鲜明，非常绚丽。" },
+      { "w": "斟酌", "p": "zhēn zhuó", "m": "考虑事情、文字等是否可行或恰当，反复推敲。" },
+      { "w": "媲美", "p": "pì měi", "m": "美好的程度差不多，可以相比。" },
+      { "w": "咫尺", "p": "zhǐ chǐ", "m": "比喻距离很近。" },
+      { "w": "徜徉", "p": "cháng yáng", "m": "闲游，安闲自在地步行。" },
+      { "w": "褴褛", "p": "lán lǚ", "m": "（衣服）破烂。" },
+      { "w": "枢纽", "p": "shū niǔ", "m": "事物相互联系的中心环节，关键部位。" },
+      { "w": "翌日", "p": "yì rì", "m": "第二天。" },
+      { "w": "巉峻", "p": "chán jùn", "m": "山势高而险。" },
+      { "w": "拾掇", "p": "shí duo", "m": "整理，收拾；修理；也指惩治。" },
+      { "w": "冗杂", "p": "rǒng zá", "m": "繁杂，琐碎。" },
+      { "w": "羁绊", "p": "jī bàn", "m": "缠住了不能脱身，束缚。" },
+      { "w": "斡旋", "p": "wò xuán", "m": "调解，调停；周旋于各方之间。" },
+      { "w": "静穆", "p": "jìng mù", "m": "安静而庄严。" },
+      { "w": "褪色", "p": "tuì sè", "m": "颜色慢慢变淡；比喻某种情感、记忆等逐渐淡漠。" },
+      { "w": "褶皱", "p": "zhě zhòu", "m": "物体表面的折痕；岩层受压力形成的弯曲。" },
+      { "w": "雾霭", "p": "wù ǎi", "m": "雾气，形容雾气浓重的样子。" },
+      { "w": "凋零", "p": "diāo líng", "m": "（草木）凋谢零落；（人事）衰败衰落。" },
+      { "w": "缄默", "p": "jiān mò", "m": "闭口不说话。" },
+      { "w": "狩猎", "p": "shòu liè", "m": "打猎。" },
+      { "w": "沟壑", "p": "gōu hè", "m": "山沟，坑洼。" },
+      { "w": "腐蚀", "p": "fǔ shí", "m": "通过化学作用使物体逐渐消损破坏；比喻坏的思想、风气侵蚀人的思想。" },
+      { "w": "拮据", "p": "jié jū", "m": "手头缺钱，经济状况不好。" },
+      { "w": "栈桥", "p": "zhàn qiáo", "m": "火车站、港口等供旅客上下车或装卸货物的桥梁式建筑。" },
+      { "w": "煞白", "p": "shà bái", "m": "形容脸色因恐惧、生病等变得非常白。" },
+      { "w": "瓦罐汤", "p": "wǎ guàn tāng", "m": "江西特色美食，用瓦罐慢炖而成的汤品，味道浓郁。" },
+      { "w": "粤港澳", "p": "Yuè Gǎng Ào", "m": "指广东省、香港特别行政区、澳门特别行政区的合称。" },
+      { "w": "砥砺前行", "p": "dǐ lì qián xíng", "m": "经历磨炼，克服困难，奋勇向前。" },
+      { "w": "卑躬屈膝", "p": "bēi gōng qū xī", "m": "形容低声下气，讨好奉承的样子。" },
+      { "w": "模棱两可", "p": "mó léng liǎng kě", "m": "形容态度含糊，不明确表示赞成或反对。" },
+      { "w": "见微知著", "p": "jiàn wēi zhī zhù", "m": "见到事情的苗头，就能知道它的实质和发展趋势。" },
+      { "w": "风驰电掣", "p": "fēng chí diàn chè", "m": "形容速度极快，像刮风闪电一样。" },
+      { "w": "笔耕不辍", "p": "bǐ gēng bù chuò", "m": "坚持写作，从不间断。" },
+      { "w": "未雨绸缪", "p": "wèi yǔ chóu móu", "m": "趁着天没下雨，先修缮房屋门窗，比喻事先做好准备。" },
+      { "w": "瞠目结舌", "p": "chēng mù jié shé", "m": "瞪着眼睛说不出话来，形容受窘或惊呆的样子。" },
+      { "w": "毋庸置疑", "p": "wú yōng zhì yí", "m": "不必怀疑，十分肯定。" },
+      { "w": "如火如荼", "p": "rú huǒ rú tú", "m": "像火那样红，像荼那样白，形容声势浩大，气氛热烈。" },
+      { "w": "触类旁通", "p": "chù lèi páng tōng", "m": "掌握了某一事物的知识或规律，就能推知同类的其他事物。" },
+      { "w": "莘莘学子", "p": "shēn shēn xué zǐ", "m": "指众多的学生。" },
+      { "w": "怒不可遏", "p": "nù bù kě è", "m": "愤怒到了无法抑制的地步。" },
+      { "w": "侃侃而谈", "p": "kǎn kǎn ér tán", "m": "形容说话理直气壮，从容不迫。" },
+      { "w": "孤陋寡闻", "p": "gū lòu guǎ wén", "m": "形容学识浅陋，见闻不广。" },
+      { "w": "大彻大悟", "p": "dà chè dà wù", "m": "彻底觉悟，完全明白。" },
+      { "w": "戛然而止", "p": "jiá rán ér zhǐ", "m": "形容声音突然中止。" },
+      { "w": "销声匿迹", "p": "xiāo shēng nì jì", "m": "不再公开讲话，不再出头露面，形容隐藏起来或不公开出现。" },
+      { "w": "如意金箍棒", "p": "rú yì jīn gū bàng", "m": "《西游记》中孙悟空的法宝，能大能小、所向披靡。" }
+    ]
+  },
+  {
+    "date": "第七日",
+    "words": [
+      { "w": "桎梏", "p": "zhì gù", "m": "脚镣和手铐，比喻束缚人或事物的东西。" },
+      { "w": "裨益", "p": "bì yì", "m": "益处。" },
+      { "w": "睿智", "p": "ruì zhì", "m": "英明有远见。" },
+      { "w": "阴霾", "p": "yīn mái", "m": "空气中因悬浮着大量烟尘而形成的浑浊现象；比喻环境、心情等阴暗。" },
+      { "w": "擎天", "p": "qíng tiān", "m": "用手托住天，形容力量巨大。" },
+      { "w": "凛冽", "p": "lǐn liè", "m": "刺骨地寒冷。" },
+      { "w": "晨曦", "p": "chén xī", "m": "早晨的光。" },
+      { "w": "镌刻", "p": "juān kè", "m": "雕刻。" },
+      { "w": "编纂", "p": "biān zuǎn", "m": "编辑，编写（多指资料较多、篇幅较大的著作）。" },
+      { "w": "饕餮", "p": "tāo tiè", "m": "传说中的贪食的恶兽，比喻贪婪的人。" },
+      { "w": "怅惘", "p": "chàng wǎng", "m": "惆怅迷惘。" },
+      { "w": "羹汤", "p": "gēng tāng", "m": "用肉、菜等做成的汤。" },
+      { "w": "蠕动", "p": "rú dòng", "m": "像蚯蚓爬行那样运动。" },
+      { "w": "颓唐", "p": "tuí táng", "m": "精神萎靡不振。" },
+      { "w": "蹂躏", "p": "róu lìn", "m": "践踏，比喻用暴力欺压、侮辱、侵害。" },
+      { "w": "深邃", "p": "shēn suì", "m": "深；深奥。" },
+      { "w": "蹒跚", "p": "pán shān", "m": "腿脚不灵便，走路缓慢、摇摆的样子。" },
+      { "w": "龌龊", "p": "wò chuò", "m": "肮脏；比喻人品质恶劣。" },
+      { "w": "繁衍", "p": "fán yǎn", "m": "逐渐增多或增广。" },
+      { "w": "陨落", "p": "yǔn luò", "m": "（星体或其他在高空运动的物体）从高空落下；比喻死亡。" },
+      { "w": "厄运", "p": "è yùn", "m": "困苦的遭遇，不幸的命运。" },
+      { "w": "祈求", "p": "qí qiú", "m": "恳求地希望。" },
+      { "w": "懵懂", "p": "měng dǒng", "m": "糊涂，不明事理。" },
+      { "w": "亵渎", "p": "xiè dú", "m": "轻慢，不尊敬。" },
+      { "w": "凌驾", "p": "líng jià", "m": "高出（别人）；压倒。" },
+      { "w": "静谧", "p": "jìng mì", "m": "安静。" },
+      { "w": "喧嚣", "p": "xuān xiāo", "m": "声音杂乱，不清静。" },
+      { "w": "禁锢", "p": "jìn gù", "m": "束缚，限制；监禁。" },
+      { "w": "馈赠", "p": "kuì zèng", "m": "赠送（礼品）。" },
+      { "w": "真谛", "p": "zhēn dì", "m": "真实的意义或道理。" },
+      { "w": "迁徙", "p": "qiān xǐ", "m": "迁移，改变居住的地方。" },
+      { "w": "再接再厉", "p": "zài jiē zài lì", "m": "比喻继续努力，再加一把劲。" },
+      { "w": "世外桃源", "p": "shì wài táo yuán", "m": "原指理想中的美好世界，后指环境幽静或与现实隔绝的美好地方。" },
+      { "w": "走投无路", "p": "zǒu tóu wú lù", "m": "无路可走，比喻处境极端困难。" },
+      { "w": "一筹莫展", "p": "yī chóu mò zhǎn", "m": "一点计策也施展不出，一点办法也想不出。" },
+      { "w": "阴谋诡计", "p": "yīn móu guǐ jì", "m": "暗中策划的害人的计谋。" },
+      { "w": "侃侃而谈", "p": "kǎn kǎn ér tán", "m": "形容说话理直气壮，从容不迫。" },
+      { "w": "鳞次栉比", "p": "lín cì zhì bǐ", "m": "形容房屋、船只等排列得很密、很整齐。" },
+      { "w": "金碧辉煌", "p": "jīn bì huī huáng", "m": "形容建筑物等颜色鲜明华丽，光彩夺目。" },
+      { "w": "相辅相成", "p": "xiāng fǔ xiāng chéng", "m": "互相补充，互相配合。" },
+      { "w": "因地制宜", "p": "yīn dì zhì yí", "m": "根据当地的实际情况，制定适当的措施。" },
+      { "w": "融会贯通", "p": "róng huì guàn tōng", "m": "把各方面的知识或道理融合贯穿起来，从而得到系统透彻的理解。" },
+      { "w": "未雨绸缪", "p": "wèi yǔ chóu móu", "m": "比喻事先做好准备。" },
+      { "w": "醍醐灌顶", "p": "tí hú guàn dǐng", "m": "比喻灌输智慧，使人彻底醒悟。" },
+      { "w": "讳疾忌医", "p": "huì jí jì yī", "m": "比喻掩饰缺点、错误，不愿接受批评帮助。" },
+      { "w": "焚膏继晷", "p": "fén gāo jì guǐ", "m": "点燃灯烛来接替日光照明，形容夜以继日地用功读书或努力工作。" },
+      { "w": "沧海一粟", "p": "cāng hǎi yī sù", "m": "大海里的一粒谷，比喻非常渺小。" },
+      { "w": "沆瀣一气", "p": "hàng xiè yī qì", "m": "比喻臭味相投的人勾结在一起。" },
+      { "w": "刚愎自用", "p": "gāng bì zì yòng", "m": "倔强固执，自以为是。" }
+    ]
+  },
+  {
+    "date": "第八日",
+    "words": [
+      { "w": "弋阳腔", "p": "Yì yáng qiāng", "m": "古代戏曲声腔之一，起源于江西弋阳。" },
+      { "w": "青阳腔", "p": "Qīng yáng qiāng", "m": "古代戏曲声腔之一，起源于安徽青阳。" },
+      { "w": "赣剧", "p": "Gàn jù", "m": "江西省地方戏曲剧种。" },
+      { "w": "景德镇瓷", "p": "Jǐng dé zhèn cí", "m": "江西景德镇出产的传统瓷器。" },
+      { "w": "青花瓷", "p": "qīng huā cí", "m": "一种白地蓝花的瓷器。" },
+      { "w": "玲珑瓷", "p": "líng lóng cí", "m": "一种米粒状镂空花纹的瓷器。" },
+      { "w": "白鹿洞书院", "p": "Bái lù dòng Shū yuàn", "m": "中国古代著名书院，位于江西庐山。" },
+      { "w": "鹅湖书院", "p": "É hú Shū yuàn", "m": "中国古代著名书院，位于江西铅山。" },
+      { "w": "白鹭洲书院", "p": "Bái lù zhōu Shū yuàn", "m": "中国古代著名书院，位于江西吉安。" },
+      { "w": "客家围屋", "p": "Kè jiā wéi wū", "m": "客家地区特有的民居建筑。" },
+      { "w": "荷包胙", "p": "hé bāo zuò", "m": "江西传统名菜，用荷叶包裹猪肉蒸制。" },
+      { "w": "傩舞", "p": "nuó wǔ", "m": "古代驱疫逐鬼的一种仪式性舞蹈。" },
+      { "w": "恰噶", "p": "qià gǎ", "m": "江西方言，意为很好、很棒。" },
+      { "w": "作兴", "p": "zuò xīng", "m": "江西方言，意为流行、时兴；喜欢。" },
+      { "w": "新妇", "p": "xīn fù", "m": "江西方言，指媳妇。" },
+      { "w": "红色摇篮", "p": "hóng sè yáo lán", "m": "指江西，中国革命的重要发源地。" },
+      { "w": "井冈山精神", "p": "Jǐng gāng shān jīng shén", "m": "井冈山革命斗争时期形成的革命精神。" },
+      { "w": "共和国摇篮", "p": "gòng hé guó yáo lán", "m": "指江西瑞金，中华苏维埃共和国临时中央政府所在地。" },
+      { "w": "赣鄱文化", "p": "Gàn Pó wén huà", "m": "江西地区文化的总称。" },
+      { "w": "浮梁茶", "p": "Fú liáng chá", "m": "江西浮梁出产的名茶。" },
+      { "w": "樟树药帮", "p": "Zhāng shù yào bāng", "m": "江西樟树地区从事药材经营的商帮。" },
+      { "w": "陶渊明", "p": "Táo Yuān míng", "m": "东晋诗人，江西浔阳人。" },
+      { "w": "慧远", "p": "Huì yuǎn", "m": "东晋高僧，佛教净土宗初祖，在江西庐山弘法。" },
+      { "w": "王勃", "p": "Wáng Bó", "m": "唐代文学家，其《滕王阁序》与江西有关。" },
+      { "w": "钟绍京", "p": "Zhōng Shào jīng", "m": "唐代书法家，江西兴国人。" },
+      { "w": "晏殊", "p": "Yàn Shū", "m": "北宋词人，江西临川人。" },
+      { "w": "晏几道", "p": "Yàn Jǐ dào", "m": "北宋词人，晏殊之子。" },
+      { "w": "欧阳修", "p": "Ōu yáng Xiū", "m": "北宋文学家、史学家，江西吉水人。" },
+      { "w": "曾巩", "p": "Zēng Gǒng", "m": "北宋散文家，江西南丰人。" },
+      { "w": "王安石", "p": "Wáng Ān shí", "m": "北宋政治家、文学家，江西临川人。" },
+      { "w": "黄庭坚", "p": "Huáng Tíng jiān", "m": "北宋诗人、书法家，江西修水人。" },
+      { "w": "杨万里", "p": "Yáng Wàn lǐ", "m": "南宋诗人，江西吉水人。" },
+      { "w": "朱熹", "p": "Zhū Xī", "m": "南宋理学家，曾在江西讲学。" },
+      { "w": "陆九渊", "p": "Lù Jiǔ yuān", "m": "南宋哲学家，江西金溪人。" },
+      { "w": "文天祥", "p": "Wén Tiān xiáng", "m": "南宋民族英雄，江西吉安人。" },
+      { "w": "姜夔", "p": "Jiāng Kuí", "m": "南宋词人、音乐家，江西鄱阳人。" },
+      { "w": "解缙", "p": "Xiè Jìn", "m": "明代文学家，江西吉水人。" },
+      { "w": "杨士奇", "p": "Yáng Shì qí", "m": "明代政治家，江西泰和人。" },
+      { "w": "汤显祖", "p": "Tāng Xiǎn zǔ", "m": "明代戏曲家，江西临川人。" },
+      { "w": "宋应星", "p": "Sòng Yìng xīng", "m": "明代科学家，江西奉新人。" },
+      { "w": "严嵩", "p": "Yán Sōng", "m": "明代权臣，江西分宜人。" },
+      { "w": "朱耷", "p": "Zhū Dā", "m": "明末清初画家，号八大山人，江西南昌人。" },
+      { "w": "蒋士铨", "p": "Jiǎng Shì quán", "m": "清代戏曲家、文学家，江西铅山人。" }
+    ]
+  }
+];
+
+    // ─────────────────────────────────────────────
+    // 状态变量
+    // ─────────────────────────────────────────────
+    let currentList = [], idx = 0, mode = '', dayIdx = null;
+    const player = document.getElementById('player');
+
+    // ─────────────────────────────────────────────
+    // TTS 引擎：3层降级链
+    // Layer 1: 有道词典（主源）
+    // Layer 2: Google TTS（备源）
+    // Layer 3: Web Speech API（终极兜底，离线可用）
+    // ─────────────────────────────────────────────
+    const TTS = (() => {
+        // 构建各源的URL
+        const buildUrls = (text) => [
+            // 有道词典 TTS（直接用汉字，不加包装文字）
+            `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=zh`,
+            // Google TTS（备用）
+            `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=tw-ob`,
+        ];
+
+        // 检测 Web Speech API 可用性
+        const speechSynthAvailable = () =>
+            'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+
+        // 获取中文语音（Web Speech API）
+        let zhVoice = null;
+        const getZhVoice = () => {
+            if (zhVoice) return zhVoice;
+            const voices = window.speechSynthesis.getVoices();
+            zhVoice = voices.find(v => v.lang.startsWith('zh')) || null;
+            return zhVoice;
+        };
+
+        // 用 <audio> 元素播放单个URL，返回Promise
+        const tryAudioUrl = (url, timeoutMs = 6000) => {
+            return new Promise((resolve, reject) => {
+                // 清理旧的监听器
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    player.oncanplaythrough = null;
+                    player.onerror = null;
+                    player.onended = null;
+                };
+
+                const timer = setTimeout(() => {
+                    cleanup();
+                    player.pause();
+                    reject(new Error('timeout'));
+                }, timeoutMs);
+
+                player.onerror = () => {
+                    cleanup();
+                    reject(new Error('audio error'));
+                };
+
+                player.oncanplaythrough = () => {
+                    clearTimeout(timer);
+                    player.play()
+                        .then(() => {
+                            player.onended = () => { cleanup(); resolve(); };
+                        })
+                        .catch(err => {
+                            cleanup();
+                            reject(err);
+                        });
+                };
+
+                // 设置新src前先停止
+                player.pause();
+                player.src = url;
+                player.load();
+            });
+        };
+
+        // Web Speech API 播放，返回Promise
+        const tryWebSpeech = (text) => {
+            return new Promise((resolve, reject) => {
+                if (!speechSynthAvailable()) {
+                    reject(new Error('Web Speech API not available'));
+                    return;
+                }
+                window.speechSynthesis.cancel(); // 取消之前的
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'zh-CN';
+                utter.rate = 0.9;
+                utter.pitch = 1;
+
+                // 尝试使用中文语音
+                const voice = getZhVoice();
+                if (voice) utter.voice = voice;
+
+                utter.onend = () => resolve();
+                utter.onerror = (e) => reject(new Error('SpeechSynthesis error: ' + e.error));
+
+                window.speechSynthesis.speak(utter);
+            });
+        };
+
+        // 主播放函数，带状态回调
+        const speak = async (text, onStatus) => {
+            const urls = buildUrls(text);
+
+            // Layer 1 & 2: 尝试外部音频源
+            for (let i = 0; i < urls.length; i++) {
+                const label = i === 0 ? '正在加载读音...' : '切换备用音源...';
+                onStatus('loading', label);
+                try {
+                    await tryAudioUrl(urls[i], 5000);
+                    onStatus('success', '');
+                    return;
+                } catch (e) {
+                    console.warn(`TTS源${i + 1}失败:`, e.message);
+                }
+            }
+
+            // Layer 3: Web Speech API 兜底
+            onStatus('fallback', '使用本地语音引擎...');
+            try {
+                await tryWebSpeech(text);
+                onStatus('success', '');
+            } catch (e) {
+                console.error('所有TTS方案均失败:', e);
+                onStatus('error', '播放失败，请点击重试');
+            }
+        };
+
+        return { speak, speechSynthAvailable, getZhVoice };
+    })();
+
+    // ─────────────────────────────────────────────
+    // 状态显示辅助
+    // ─────────────────────────────────────────────
+    const setStatus = (type, msg) => {
+        const el = document.getElementById('ttsStatus');
+        const spinner = document.getElementById('ttsSpinner');
+        const msgEl = document.getElementById('ttsMsg');
+        const btn = document.getElementById('playBtn');
+
+        // 重置
+        el.className = 'tts-status';
+        spinner.style.display = 'none';
+
+        if (!type || type === 'success') {
+            el.style.display = 'none';
+            btn.classList.remove('btn-playing');
+            btn.textContent = '🔊 播放读音';
+            return;
+        }
+
+        el.classList.add(type);
+        msgEl.textContent = msg;
+
+        if (type === 'loading' || type === 'fallback') {
+            spinner.style.display = 'inline-block';
+            btn.classList.add('btn-playing');
+            btn.textContent = '🔊 播放中...';
+        } else if (type === 'error') {
+            btn.classList.remove('btn-playing');
+            btn.textContent = '🔊 重试播放';
+        }
+    };
+
+    // ─────────────────────────────────────────────
+    // 主应用逻辑
+    // ─────────────────────────────────────────────
+    window.app = {
+        init: function() {
+            // 预加载 Web Speech API 语音列表（某些浏览器需要交互后才能加载）
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.addEventListener('voiceschanged', () => {
+                    TTS.getZhVoice(); // 刷新语音缓存
+                });
+            }
+
+            const grid = document.getElementById('dateGrid');
+            vocabData.forEach((d, i) => {
+                const b = document.createElement('div');
+                b.className = 'date-btn';
+                b.innerText = d.date;
+                b.onclick = () => {
+                    dayIdx = i;
+                    document.querySelectorAll('.date-btn').forEach(x => x.classList.remove('active'));
+                    b.classList.add('active');
+                    document.getElementById('modeOptions').style.display = 'flex';
+                };
+                grid.appendChild(b);
+            });
+        },
+
+        start: function(m) {
+            mode = m;
+            if (m === 'random_all') {
+                currentList = vocabData.flatMap(d => d.words).sort(() => Math.random() - 0.5);
+                document.getElementById('viewTitle').innerText = "🏆 全词库随机挑战";
+            } else {
+                const day = vocabData[dayIdx];
+                currentList = (m === 'test') ? [...day.words].sort(() => Math.random() - 0.5) : [...day.words];
+                document.getElementById('viewTitle').innerText = `${day.date} - ${m === 'learn' ? '学习' : '听写'}`;
+            }
+            idx = 0;
+            document.getElementById('menuView').style.display = 'none';
+            document.getElementById('gameView').style.display = 'flex';
+            document.getElementById('appHeader').style.display = 'block';
+            this.update();
+        },
+
+        update: function() {
+            const item = currentList[idx];
+            document.getElementById('progressText').innerText = `进度: ${idx + 1} / ${currentList.length}`;
+            if (mode === 'learn') {
+                document.getElementById('learnArea').style.display = 'block';
+                document.getElementById('testArea').style.display = 'none';
+                document.getElementById('wordShow').innerText = item.w;
+                document.getElementById('pinyinShow').innerText = item.p;
+                document.getElementById('meaningShow').innerText = item.m;
+            } else {
+                document.getElementById('learnArea').style.display = 'none';
+                document.getElementById('testArea').style.display = 'block';
+            }
+            setStatus(null); // 重置状态
+            // 切换单词后自动播放
+            setTimeout(() => this.play(), 300);
+        },
+
+        play: function() {
+            const word = currentList[idx].w;
+            TTS.speak(word, setStatus);
+        },
+
+        move: function(step) {
+            if (idx + step >= 0 && idx + step < currentList.length) {
+                idx += step;
+                this.update();
+            } else if (idx + step >= currentList.length && mode !== 'learn') {
+                this.finish();
+            }
+        },
+
+        finish: function() {
+            // 停止任何正在播放的语音
+            player.pause();
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+            document.getElementById('gameView').style.display = 'none';
+            document.getElementById('appHeader').style.display = 'none';
+            document.getElementById('resultView').style.display = 'flex';
+            document.getElementById('resultBox').innerHTML = currentList.map((w, i) => `
+                <div class="result-item">
+                    <span>${i+1}. <strong>${w.w}</strong></span>
+                    <span style="color:#888;">${w.p}</span>
+                </div>`).join('');
+        }
+    };
+
+    window.onload = () => window.app.init();
+})();
+</script>
+</body>
+</html>
