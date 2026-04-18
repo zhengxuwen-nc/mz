@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>胡同文化沉浸式学习器 - 倍速同步版</title>
+    <style>
+        :root { --bg: #121212; --panel: #1e1e1e; --highlight: #ffeb3b; --en-size: 2.2rem; --zh-size: 1.4rem; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; overflow: hidden; }
+        
+        .video-box { width: 100%; height: 38vh; background: #000; display: flex; justify-content: center; position: relative; }
+        video { height: 100%; max-width: 100%; }
+
+        /* 复合工具栏 */
+        .toolbar { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px; background: var(--panel); border-bottom: 1px solid #333; }
+        .row { display: flex; gap: 8px; }
+        
+        button { padding: 6px 14px; border: none; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; background: #333; color: #ccc; transition: 0.3s; border: 1px solid transparent; }
+        button.active { background: #555; color: #fff; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); border-color: #777; }
+        .btn-speed { background: #444; color: #ffeb3b; }
+        .btn-speed.current { background: #ffeb3b; color: #000; }
+        .btn-en { border-color: #e74c3c; } .btn-zh { border-color: #3498db; }
+
+        .lyrics-box { height: 45vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 0 25px; }
+        
+        .word { display: inline-block; position: relative; color: rgba(255, 255, 255, 0.2); margin-right: 0.25em; white-space: nowrap; }
+        .word::after {
+            content: attr(data-text);
+            position: absolute;
+            left: 0; top: 0;
+            color: var(--highlight);
+            width: 0;
+            overflow: hidden;
+        }
+        
+        /* 变色速度受 --speed-rate 变量控制 */
+        .playing .word::after {
+            animation: fillWord calc(var(--word-dur) / var(--speed-rate)) linear forwards;
+            animation-delay: calc(var(--word-delay) / var(--speed-rate));
+        }
+
+        @keyframes fillWord { from { width: 0; } to { width: 100%; } }
+        .en-line { font-size: var(--en-size); font-weight: 800; margin-bottom: 25px; display: block; }
+        .zh-line { font-size: var(--zh-size); color: rgba(255,255,255,0.4); display: block; }
+        .blur { filter: blur(12px); }
+    </style>
+</head>
+<body>
+
+<div class="video-box">
+    <video id="v" src="input.mp4" controls></video>
+</div>
+
+<div class="toolbar">
+    <div class="row">
+        <button class="btn-speed" onclick="setSpeed(0.8, this)">0.8x</button>
+        <button class="btn-speed current" onclick="setSpeed(1.0, this)">1.0x</button>
+        <button class="btn-speed" onclick="setSpeed(1.2, this)">1.2x</button>
+    </div>
+    <div class="row">
+        <button class="btn-en" onclick="btnToggle(this, 'en')">模糊英文</button>
+        <button class="btn-zh" onclick="btnToggle(this, 'zh')">模糊中文</button>
+        <button onclick="toggleMute(this)">开启伴唱 (Mute)</button>
+    </div>
+</div>
+
+<div class="lyrics-box">
+    <div id="en-wrap" class="en-line"></div>
+    <div id="zh-wrap" class="zh-line"></div>
+</div>
+
+<script>
+// 此处复用之前的完整 subtitles 数据
+const subtitles = [
+    {start: 10.0, end: 14.0, zh: "不久前，被称为“北京胡同版《教父》”的电影《老炮儿》在中国上映", en: "Not long ago, a \"Godfather-esque\" Chinese film \"Mr. Six\" hit the screen"},
+    {start: 15.0, end: 17.0, zh: "再度唤起了人们对老北京胡同文化的关注", en: "once again arousing people's interest in Beijing's hutong culture"},
+    {start: 18.0, end: 22.0, zh: "胡同，可谓是北京令人难忘的一个城市符号", en: "The meandering alleyways exude a quaint and curious charm existing as an unforgettable symbol of Beijing"},
+    {start: 23.0, end: 26.0, zh: "让我们去一探胡同的魅力吧", en: "Today, let's take a look at the glamour of Beijing's hutongs."},
+    {start: 30.0, end: 32.0, zh: "胡同，是城市小巷在北京的特有叫法", en: "In Beijing, alleyways are called hutongs"},
+    {start: 33.0, end: 38.0, zh: "它的历史很悠久从元朝开始算起至今已有七百多年", en: "They have a long history of more than 700 years dating from the ancient Yuan Dynasty"},
+    {start: 39.0, end: 41.0, zh: "可谓是历尽沧桑", en: "and have witnessed China's many changes"},
+    {start: 42.0, end: 44.0, zh: "胡同最多时有6千多条", en: "There used to be more than 6,000 hutongs in Beijing"},
+    {start: 45.0, end: 48.0, zh: "要是将它们首尾相连长度可能不亚于万里长城", en: "Linking them end to end the total length may even exceed that of the Great Wall"},
+    {start: 49.0, end: 54.0, zh: "胡同里的建筑多为四合院，有时被称为中国庭院", en: "The most common building is the siheyuan sometimes referred to as the Chinese courtyard"},
+    {start: 55.0, end: 57.0, zh: "四四方方的建筑物", en: "surrounded by buildings on all four sides"},
+    {start: 58.0, end: 63.0, zh: "充分体现了中国风水的“天圆地方”理念", en: "The siheyuan composition fully embodies the idea of “round sky and square earth” in feng-shui"},
+    {start: 65.0, end: 67.0, zh: "胡同里还有不少别具特色的摆设", en: "Hutongs are characterized by many interesting oddities"},
+    {start: 68.0, end: 71.0, zh: "比如在一些大四合院会有“上马石”对称摆在门两侧", en: "some of the bigger siheyuans have what are called “horse stones” at the gates"},
+    {start: 72.0, end: 74.0, zh: "这是古人用来上马、下马的石头", en: "they were used in ancient times to help people mount their horses"},
+    {start: 75.0, end: 78.0, zh: "胡同也是文化艺术发展的见证者", en: "Hutongs have also witnessed the development of culture and art"},
+    {start: 79.0, end: 83.0, zh: "曾居住过京剧大师梅兰芳、国画大师齐白石", en: "Home to renowned citizens including Mei Lanfang and Qi Baishi"},
+    {start: 88.0, end: 90.0, zh: "作家茅盾等名人", en: "and the famous writer Mao Dun."},
+    {start: 91.0, end: 94.0, zh: "这些名人故居都是一笔宝贵的文化财富", en: "The former residences have become precious cultural heritage sites."},
+    {start: 95.0, end: 100.0, zh: "如果故宫等代表皇家文化", en: "If the Forbidden City and others represent royal Chinese culture"},
+    {start: 101.0, end: 103.0, zh: "那么胡同无疑是平民文化的代表", en: "then the hutongs are undoubtedly the symbol of civilian culture"},
+    {start: 104.0, end: 107.0, zh: "胡同一词源自蒙古语，有水井的意思", en: "The word “hutong” derives from Mongolian and means “well,”"},
+    {start: 108.0, end: 111.0, zh: "在古代，水井是居民社交、拉近感情的场所", en: "as in the past, a well might be where people socialized with their neighbors"},
+    {start: 112.0, end: 114.0, zh: "浓浓的人情味是胡同的精神内涵", en: "Hence, humanity is the essence of the hutong spirit"},
+    {start: 115.0, end: 120.0, zh: "许多胡同渐渐被高楼大厦所取代", en: "While many hutongs are gradually being replaced by skyscrapers"},
+    {start: 121.0, end: 125.0, zh: "不少胡同依旧保存完好并保留从前的生活方式", en: "a number of others have been preserved intact with lifestyles unchanged"},
+    {start: 126.0, end: 133.0, zh: "孩子们玩捉迷藏，长辈们围坐着下象棋", en: "children play hide and seek with their elders sitting in the open air playing Chinese chess"},
+    {start: 134.0, end: 140.0, zh: "亲切融洽的邻里关系", en: "without any of the unwelcome clamor of urban life"},
+    {start: 141.0, end: 146.0, zh: "胡同深处就是温暖的家，是童年的珍贵记忆", en: "The hutongs are their home and represent the cherished memory of childhood."},
+    {start: 147.0, end: 153.0, zh: "胡同的魅力逐渐走向世界，黄包车成为旅游名片", en: "Hutongs have spread their charm across the world; rickshaws are a mainstay of tourism"},
+    {start: 154.0, end: 158.0, zh: "车夫用北京话甚至夹杂英文讲述历史", en: "Rickshaw riders delight their passengers using local dialect or an English sentence or two."},
+    {start: 159.0, end: 164.0, zh: "感受文化就如同穿越了时光", en: "It is an experience of Beijing's culture and is almost like travelling back in time"},
+    {start: 165.0, end: 171.0, zh: "南锣鼓巷等胡同有许多个性化店铺", en: "South Gong and Drum Lane and others are famous for unique boutiques"},
+    {start: 172.0, end: 176.0, zh: "店主在四合院里出售创意商品", en: "Vendors try to sell their creative items near the antique siheyuans"},
+    {start: 177.0, end: 183.0, zh: "古典与时尚、东西方文化在这里和谐共生", en: "Classical culture coexists with modernity and the East mingles with the West."},
+    {start: 185.0, end: 188.0, zh: "胡同是古老的也是崭新的", en: "Hutongs are old, yet they are also new."},
+    {start: 189.0, end: 193.0, zh: "它们见证了北京的发展变迁", en: "They have witnessed Beijing's development"},
+    {start: 194.0, end: 196.0, zh: "同时也是北京人爱家精神的根", en: "and serve as the root of Beijingers’ sense of home and identity"},
+    {start: 197.0, end: 200.0, zh: "它是中国历史文化的呈现", en: "Most importantly they are a representation of Chinese history and culture"},
+    {start: 201.0, end: 206.0, zh: "在这里，你能感受到中国人道不完的故事", en: "In the hutongs, it's as if you're living inside one of the never-ending stories."}
+];
+
+const v = document.getElementById('v');
+const enW = document.getElementById('en-wrap');
+const zhW = document.getElementById('zh-wrap');
+let lastIdx = -1;
+let currentSpeed = 1.0;
+
+// 设置倍速函数
+function setSpeed(speed, btn) {
+    currentSpeed = speed;
+    v.playbackRate = speed; // 调整视频速率
+    document.documentElement.style.setProperty('--speed-rate', speed); // 调整CSS动画速率
+    
+    // 更新按钮样式
+    document.querySelectorAll('.btn-speed').forEach(b => b.classList.remove('current'));
+    btn.classList.add('current');
+}
+
+v.ontimeupdate = () => {
+    const time = v.currentTime;
+    const idx = subtitles.findIndex(s => time >= s.start && time <= s.end);
+
+    if (idx !== -1 && idx !== lastIdx) {
+        lastIdx = idx;
+        const s = subtitles[idx];
+        const dur = s.end - s.start;
+        
+        // 动态设置速率变量
+        document.documentElement.style.setProperty('--speed-rate', currentSpeed);
+
+        const words = s.en.split(' ');
+        const wordDur = dur / words.length;
+        enW.innerHTML = words.map((w, i) => 
+            `<span class="word" data-text="${w}" style="--word-dur:${wordDur}s; --word-delay:${i * wordDur}s">${w}</span>`
+        ).join('');
+        
+        const chars = s.zh.split('');
+        const charDur = dur / chars.length;
+        zhW.innerHTML = chars.map((c, i) => 
+            `<span class="word" data-text="${c}" style="--word-dur:${charDur}s; --word-delay:${i * charDur}s">${c}</span>`
+        ).join('');
+
+        enW.classList.remove('playing'); zhW.classList.remove('playing');
+        void enW.offsetWidth; 
+        enW.classList.add('playing'); zhW.classList.add('playing');
+    } else if (idx === -1) {
+        enW.innerHTML = ""; zhW.innerHTML = ""; lastIdx = -1;
+    }
+};
+
+function btnToggle(btn, type) {
+    btn.classList.toggle('active');
+    (type === 'en' ? enW : zhW).classList.toggle('blur');
+}
+
+function toggleMute(btn) {
+    v.muted = !v.muted;
+    btn.classList.toggle('active');
+    btn.innerText = v.muted ? "恢复原唱 (Unmute)" : "开启伴唱 (Mute)";
+}
+</script>
+</body>
+</html>
